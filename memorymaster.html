@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Path Memory Maze</title>
+    <style>
+        :root {
+            --primary-color: #ff6b35;
+            --secondary-color: #f7c59f;
+            --dark-color: #1a1a2e;
+            --accent-color: #e94560;
+            --success-color: #5cb85c;
+            --highlight-color: #ffde59;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: radial-gradient(circle, #2a2a45 0%, #121224 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+
+            .game-container {
+        position: relative;
+        width: min(600px, 95vw);
+        height: min(600px, 95vw); /* Make it square based on width */
+        margin: 20px auto;
+        border-radius: 10px;
+        box-shadow: 0 0 30px rgba(255, 107, 53, 0.3);
+        overflow: hidden;
+    }
+    
+    #game-canvas {
+        width: 100%;
+        height: 100%;
+        background-color: var(--dark-color);
+        border-radius: 10px;
+        cursor: pointer;
+    }
+    
+    .controls {
+        display: flex;
+        gap: 20px;
+        margin: 20px auto;
+        width: min(600px, 95vw);
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .difficulty-select {
+        display: flex;
+        gap: 10px;
+        margin: 15px auto;
+        width: min(600px, 95vw);
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .status-bar {
+        display: flex;
+        justify-content: space-between;
+        width: min(600px, 95vw);
+        margin: 10px auto;
+        padding: 5px 15px;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 50px;
+        font-weight: 500;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .instructions {
+        max-width: min(600px, 95vw);
+        margin: 20px auto;
+        padding: 20px;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        font-size: 15px;
+        line-height: 1.6;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .challenge-modes {
+        display: none;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 15px auto;
+        width: min(600px, 95vw);
+        justify-content: center;
+    }
+    
+    /* Media queries for smaller screens */
+    @media (max-width: 640px) {
+        h1 {
+            font-size: 30px;
+        }
+        
+        .status-bar {
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 10px;
+        }
+        
+        .timer, .lives, .level-display {
+            font-size: 14px;
+            padding: 5px 10px;
+        }
+        
+        .keyboard-controls {
+            font-size: 12px;
+            padding: 8px 15px;
+        }
+        
+        .instructions {
+            font-size: 14px;
+        }
+    }
+        
+
+        
+
+        
+        .title-container {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            font-size: 40px;
+            margin: 10px 0;
+            color: var(--primary-color);
+            text-shadow: 0 0 15px rgba(255, 107, 53, 0.7);
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+        
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            transition: all 0.3s;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(233, 69, 96, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(-1px);
+        }
+        
+        button:disabled {
+            background: linear-gradient(135deg, #666, #444);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+
+        .difficulty-option {
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .difficulty-option:hover {
+            background-color: rgba(255, 107, 53, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .difficulty-option.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+        }
+        
+
+        .timer, .lives, .level-display {
+            font-size: 18px;
+            padding: 8px 15px;
+            border-radius: 25px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .timer {
+            color: var(--secondary-color);
+        }
+        
+        .lives {
+            color: var(--accent-color);
+        }
+        
+        .level-display {
+            color: var(--highlight-color);
+        }
+        
+
+        
+        .instructions h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+        
+        .key-hint {
+            display: inline-block;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 0 3px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #2a2a45 0%, #1a1a2e 100%);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 0 50px rgba(255, 107, 53, 0.5);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+        
+        .modal h2 {
+            color: var(--primary-color);
+            font-size: 32px;
+            margin-top: 0;
+            text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+        }
+        
+        .modal p {
+            font-size: 18px;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+        
+        .modal button {
+            margin-top: 15px;
+            font-size: 18px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .flame {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(2px);
+            pointer-events: none;
+        }
+        
+        .keyboard-controls {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 50px;
+            margin: 10px auto;
+            font-size: 14px;
+            color: var(--secondary-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+        
+
+        
+        .challenge-mode {
+            padding: 10px 15px;
+            border-radius: 50px;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .challenge-mode:hover {
+            background-color: rgba(255, 222, 89, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .challenge-mode.active {
+            background: linear-gradient(135deg, var(--highlight-color), #ffa41b);
+            color: var(--dark-color);
+            box-shadow: 0 5px 15px rgba(255, 222, 89, 0.4);
+            font-weight: 600;
+        }
+        
+        .volume-control {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        
+        .volume-control:hover {
+            transform: scale(1.1);
+        }
+        
+        .volume-icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--secondary-color);
+        }
+        
+        .muted .volume-icon {
+            fill: var(--accent-color);
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+        
+        .pulse-effect {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 107, 53, 0.5);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.7);
+            pointer-events: none;
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="title-container">
+        <h1>FIRE PATH</h1>
+    </div>
+    
+    <div class="difficulty-select">
+        <div class="difficulty-option active" data-difficulty="easy">Easy (30s)</div>
+        <div class="difficulty-option" data-difficulty="medium">Medium (15s)</div>
+        <div class="difficulty-option" data-difficulty="hard">Hard (10s)</div>
+        <div class="difficulty-option" data-difficulty="challenge">Challenge</div>
+    </div>
+    
+    <div class="challenge-modes hidden">
+        <div class="challenge-mode active" data-challenge="random">Random Maps</div>
+        <div class="challenge-mode" data-challenge="timed">Time Attack</div>
+        <div class="challenge-mode" data-challenge="reverse">Reverse Path</div>
+        <div class="challenge-mode" data-challenge="darkness">Darkness</div>
+        <div class="challenge-mode" data-challenge="moving">Moving Walls</div>
+    </div>
+    
+    <div class="status-bar">
+        <div class="timer">Time: 30s</div>
+        <div class="level-display">Level: 1</div>
+        <div class="lives">Lives: ❤️❤️❤️</div>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="game-canvas" width="600" height="600"></canvas>
+        <div class="volume-control">
+            <svg class="volume-icon" viewBox="0 0 24 24">
+                <path d="M12,4L9,7H5V17H9L12,20V4Z M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16.02C15.5,15.29 16.5,13.77 16.5,12M18,12C18,14.61 16.22,16.83 13.77,17.69V20.27C17.28,19.34 20,16 20,12C20,8 17.28,4.66 13.77,3.73V6.31C16.22,7.17 18,9.39 18,12Z"/>
+            </svg>
+        </div>
+    </div>
+    
+    <div class="keyboard-controls">
+        Keyboard: Press <span class="key-hint">H</span> for Hint | <span class="key-hint">Space</span> to Start/Pause | <span class="key-hint">R</span> to Reset
+    </div>
+    
+    <div class="controls">
+        <button id="start-btn">Start Game</button>
+        <button id="hint-btn" disabled>Show Hint</button>
+    </div>
+    
+    <div class="instructions">
+        <h3>How to Play</h3>
+        <p>Memorize the fiery path shown during the countdown, then trace it with your cursor when the maze turns dark. Stay on the path to keep your flame alive! Press <span class="key-hint">H</span> for a hint if you get lost.</p>
+        <p><strong>Challenge Mode:</strong> Face unique challenges with random maze configurations, time constraints, and special modifiers!</p>
+    </div>
+    
+    <div id="result-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="result-text">Game Over!</h2>
+            <p id="result-details"></p>
+            <button id="play-again-btn">Play Again</button>
+        </div>
+    </div>
+    
+    <script>
+        // Game Constants
+        const DIFFICULTY = {
+            easy: { viewTime: 30, mazeSize: 6, particles: 10 },
+            medium: { viewTime: 15, mazeSize: 8, particles: 15 },
+            hard: { viewTime: 10, mazeSize: 10, particles: 20 },
+            challenge: { viewTime: 20, mazeSize: 8, particles: 20 }
+        };
+        
+        const CHALLENGE_TYPES = {
+            random: { name: "Random Maps", description: "Each level has a completely different path layout" },
+            timed: { name: "Time Attack", description: "Complete levels with decreasing time limits" },
+            reverse: { name: "Reverse Path", description: "Path is shown in reverse direction" },
+            darkness: { name: "Darkness", description: "Limited visibility around your flame" },
+            moving: { name: "Moving Walls", description: "Path segments shift and change" }
+        };
+        
+
+        // Game Variables
+        let currentDifficulty = 'easy';
+        let currentChallenge = 'random';
+        let timeRemaining = DIFFICULTY[currentDifficulty].viewTime;
+        let lives = 3;
+        let gameState = 'idle'; // idle, memorize, play, hint, gameOver, win
+        let maze = [];
+        let path = [];
+        let playerPosition = { x: 0, y: 0 };
+        let startCell = { row: 0, col: 0 };
+        let endCell = { row: 0, col: 0 };
+        let countdownInterval;
+        let hintTimeRemaining = 0;
+        let hintInterval;
+        let flames = [];
+        let particles = [];
+        let followingPath = false;
+        let level = 1;
+        let soundEnabled = true;
+        let challengeConfig = {};
+        let keyboardMode = false;
+        let keyboardPosition = { row: 0, col: 0 };
+        let pulseEffects = [];
+        
+        // Sound Effects
+        const sounds = {
+            background: new Audio(),
+            win: new Audio(),
+            lose: new Audio(),
+            hint: new Audio(),
+            start: new Audio(),
+            flame: new Audio(),
+            click: new Audio()
+        };
+        
+        // DOM Elements
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const timerDisplay = document.querySelector('.timer');
+        const livesDisplay = document.querySelector('.lives');
+        const levelDisplay = document.querySelector('.level-display');
+        const difficultyOptions = document.querySelectorAll('.difficulty-option');
+        const challengeModes = document.querySelector('.challenge-modes');
+        const challengeOptions = document.querySelectorAll('.challenge-mode');
+        const resultModal = document.getElementById('result-modal');
+        const resultText = document.getElementById('result-text');
+        const resultDetails = document.getElementById('result-details');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const volumeControl = document.querySelector('.volume-control');
+        
+        // Load sound effects
+        function initSounds() {
+            sounds.background.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ea2tra2trd3d3d3d3goKCgoKCkJCQkJCQnZ2dnZ2dqqqqqqqqt7e3t7e3xMTExMTE0dHR0dHR3t7e3t7e6+vr6+vr+Pj4+Pj4//8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAX//';
+            sounds.win.src = 'data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAAAdAB4AIQAkACUAJAAiAB4AGAAZACQAOgBDAEIAMgAjABwAGgAhAC0ANwA7ADsANAApAC0ANwA8ADgAKwAfABQADAAGAAgADwAYABkAFgASAA0ADQAUACIAKwAtACUAFgAFAPb/5//h/+D/5v/r/+v/5//j/+T/6//y//j/+v/4//L/6f/g/9j/0//P/87/0f/U/9n/4P/o//H//P8HAA0AFQAZAB0AIAAgAB8AGQASAAoAAQD//wAAAgADAAUACgARBQ==';
+            sounds.lose.src = 'data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAADGAKsAjgB8AH0AjQC0APIA/QD3AOP/v/+h/5D/oP/S/wwAQQBTADD/w/5n/jj+TP6e/jT/6v+JAOsAzQBOAJ7/Kf/1/gL/R/+8/zkApAAGAQ8B2ABWAO//mP9y/4T/wv8eAIkA6QBDAWcBRQHgAF0A5/+f/4v/qv/w/1IAzAAxAXEBVgECAYwAGgDS/7f/zf8FAEQAiQDWAAwBGAEOAeoAvAB/AE4AJgAcADAAXwCZAN0AEAEiASIBBgHUAIYAPgAEAOb/4//z/xQAQwB3AKMAyADUAMYApwBtACcA6P+2/5L/h/+Y/7f/5f8pAHIAswDmAAABCgH7ANoAowBaAA==';
+            sounds.hint.src = 'data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAABJAHsAfQBaACYA9v/V/8n/y//Z/+7/BgAeADQAQQBKAEwASAA+AC8AHAAJAPL/2v/F/7H/o/+Y/5L/kP+Q/5X/nv+q/7v/0v/r/wUAIAA7AFUAbQCEAJgAqgC6AMcA0QDXANsA2wDZANQAywDBALUApQCTAIAAawBVAD4AJwAQAPn/4v/L/7X/oP+N/3z/bv9i/1n/U/9Q/1D/U/9Y/17/Z/9z/4D/j/+f/7D/w//W/+r//f8RAB4AKwA4AEQATwBYAGAAZwBsAG8AcABwAG4AagBkAFwAUgBGADgAKQAZAAkA+f/p/9n/yf+5/6n/mv+L/37/cv9n/13/Vf9O/0j/Q/9A/z//f/9j/2v/dP9+/4j/k/+f/6v/uP/F/9P/4P/t//r/BgATAB8AKgA0AD0ARgBN';
+            sounds.start.src = 'data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAABBfqR7JHkHd4R1qHRWdGJ0F3W2dlJ5UHyIf0uDRoe0ix2QY5SNmGKcO6DTo12nJKuqrj2yvrVSuIS6mb3IwJ7DoMaYySHMZs4g0ILS09S41irYT9la3FTdJt6u3kffYd+E34zfjN9a3wLfq97A3Xrcu9q02brXH9ZW1LXSRdEL0BPPQc640PfTmNiu3SnjE+ny767zDfZN93n3BPeh9sn1ifRx82jye/H18Izw6u++7yvxkvIO9K31NPey+ID59/mB+Vz4tPaS9I7ymvDT7hrtLeuB6YbobeqY8Mv47wHdCh8TtBufI4sqiC/ZNFA5vj33QUhFg0h0SitLfEqnSBpGXULvPRU5sjOtLZQnjCb77/0=';
+            sounds.flame.src = 'data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAAAdAEsAdQCTAKUAsQC2ALYAsACmAJkAiQB3AGQATgA4ACIADAD3/+P/0P+9/6z/nf+Q/4T/ev9y/2z/aP9m/2f/av9v/3X/fP+F/5D/nf+r/7r/yv/c/+//AgAWACsAQABVAGsAgACUAKgAvADQAOMA9QAGARYBJAExAT0BRwFQAVgBXgFjAWcBaAFoAWcBZAFgAVoBUwFKAUABNAEnARkBCQH4AOfA1gDEALEAnQCIAHIAXABFAC0AFgD//+n/0/+9/6j/lP9//2z/Wv9I/zf/J/8Y/wr//f7x/ub+3P7S/sn+wf67/rf+tP6y/rH+sf6y/rT+t/67/r/+xP7K/tH+2f7i/uv+9f4A/wv/Fv8i/y//Pf9L/1r/af94/4f/lv+m/7f/x//Y/+j/+f8KABUAFQA=';
+            sounds.click.src = 'data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAAAdABcAHAAiACoAMwA8AEUATABSAFYAWgBbAFsAWQBWAFEATABFAD4ANwAvACcAHwAYAA8ABgD9//X/7P/k/9v/0//M/8T/vf+2/7D/qv+k/5//m/+X/5T/kP+N/4v/iv+I/4f/h/+H/4b/h/+I/4j/if+L/4z/jv+Q/5L/lf+Y/5v/nf+h/6T/qP+r/67/sv+1/7n/vf/A/8T/x//L/87/0v/V/9j/3P/f/+L/5f/o/+r/7f/v//L/9P/2//j/+v/8//7///8BAQIABAIGAwgECAQJBQsFDAYMBw0IDQkOCg4LDwwPDBANEA4QDhEPERAREBIQEhETERMSExIUExQTFBQUFRQVFBYUEgMJAAwACQAMAA8ADwAPAA8AEAAQABEAEQASABIAEgASABIAEQARABAADwANAAwACgAIAAUAAwAAAP3/+v/3//T/';
+            
+            // Set volume levels
+            sounds.background.volume = 0.3;
+            sounds.win.volume = 0.5;
+            sounds.lose.volume = 0.5;
+            sounds.hint.volume = 0.4;
+            sounds.start.volume = 0.4;
+            sounds.flame.volume = 0.2;
+            sounds.click.volume = 0.3;
+            
+            // Loop background
+            sounds.background.loop = true;
+        }
+        
+        // Toggle sound
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            
+            if (soundEnabled) {
+                volumeControl.classList.remove('muted');
+                if (gameState !== 'idle' && gameState !== 'gameOver') {
+                    sounds.background.play();
+                }
+            } else {
+                volumeControl.classList.add('muted');
+                sounds.background.pause();
+            }
+        }
+        
+        // Play sound
+        function playSound(soundName) {
+            if (soundEnabled) {
+                sounds[soundName].currentTime = 0;
+                sounds[soundName].play();
+            }
+        }
+        
+        // GetCellSize function to be responsive
+        function getCellSize() {
+            const mazeSize = DIFFICULTY[currentDifficulty].mazeSize;
+            return Math.floor(canvas.width / mazeSize);
+        }
+        
+        // Initialize challenge mode configuration
+        function initChallengeConfig() {
+            let baseConfig = {
+                viewTime: 20,
+                mazeSize: 8,
+                specialEffect: null
+            };
+            
+            switch (currentChallenge) {
+                case 'random':
+                    // Random maps already handled by maze generation
+                    break;
+                case 'timed':
+                    baseConfig.viewTime = 25 - (level * 2); // Decreasing time per level
+                    if (baseConfig.viewTime < 5) baseConfig.viewTime = 5;
+                    break;
+                case 'reverse':
+                    baseConfig.specialEffect = 'reverse';
+                    break;
+                case 'darkness':
+                    baseConfig.specialEffect = 'darkness';
+                    break;
+                case 'moving':
+                    baseConfig.specialEffect = 'moving';
+                    break;
+            }
+            
+            // In challenge mode, mazeSize increases with level
+            if (level > 1) {
+                baseConfig.mazeSize = 8 + Math.floor((level - 1) / 2);
+                if (baseConfig.mazeSize > 12) baseConfig.mazeSize = 12;
+            }
+            
+            challengeConfig = baseConfig;
+            
+            // Update difficulty settings with challenge config
+            DIFFICULTY.challenge.viewTime = challengeConfig.viewTime;
+            DIFFICULTY.challenge.mazeSize = challengeConfig.mazeSize;
+        }
+        
+        // Generate a random maze with a valid path
+        function generateMaze() {
+            const size = DIFFICULTY[currentDifficulty].mazeSize;
+            maze = [];
+            
+            // Initialize empty maze
+            for (let i = 0; i < size; i++) {
+                const row = [];
+                for (let j = 0; j < size; j++) {
+                    row.push(0); // 0 = wall, 1 = path
+                }
+                maze.push(row);
+            }
+            
+            // Generate a random path from start to end
+            startCell = { row: 0, col: Math.floor(Math.random() * size) };
+            endCell = { row: size - 1, col: Math.floor(Math.random() * size) };
+            
+            // For challenge mode, add more variety
+            if (currentDifficulty === 'challenge') {
+                // Randomize start and end positions more
+                if (Math.random() < 0.5) {
+                    // Horizontal start-end
+                    startCell = { row: Math.floor(Math.random() * size), col: 0 };
+                    endCell = { row: Math.floor(Math.random() * size), col: size - 1 };
+                } else {
+                    // Vertical start-end (default)
+                    startCell = { row: 0, col: Math.floor(Math.random() * size) };
+                    endCell = { row: size - 1, col: Math.floor(Math.random() * size) };
+                }
+                
+                // For higher levels, add more complexity
+                if (level > 3 && Math.random() < 0.5) {
+                    // Diagonal or random start-end
+                    startCell = { 
+                        row: Math.floor(Math.random() * (size/2)), 
+                        col: Math.floor(Math.random() * (size/2)) 
+                    };
+                    endCell = { 
+                        row: Math.floor(size/2 + Math.random() * (size/2)), 
+                        col: Math.floor(size/2 + Math.random() * (size/2)) 
+                    };
+                }
+            }
+            
+            maze[startCell.row][startCell.col] = 1;
+            maze[endCell.row][endCell.col] = 1;
+            
+            // Generate path using recursive backtracking
+            path = [];
+            generatePath(startCell.row, startCell.col, endCell.row, endCell.col);
+            
+            // For reverse challenge, reverse the path
+            if (currentDifficulty === 'challenge' && challengeConfig.specialEffect === 'reverse') {
+                path.reverse();
+            }
+            
+            // Set player position at start
+            const cellSize = getCellSize();
+            playerPosition = {
+                x: startCell.col * cellSize + cellSize / 2,
+                y: startCell.row * cellSize + cellSize / 2
+            };
+            
+            // Initialize keyboard position
+            keyboardPosition = { row: startCell.row, col: startCell.col };
+        }
+        
+        // Generate a random path from start to end
+        function generatePath(startRow, startCol, endRow, endCol) {
+            const size = DIFFICULTY[currentDifficulty].mazeSize;
+            let currentRow = startRow;
+            let currentCol = startCol;
+            
+            path.push({ row: currentRow, col: currentCol });
+            
+            // Move toward the end cell with some randomness
+            while (currentRow !== endRow || currentCol !== endCol) {
+                let possibleMoves = [];
+                
+                // Try to move down if we're above the end
+                if (currentRow < endRow) {
+                    possibleMoves.push({ row: currentRow + 1, col: currentCol });
+                }
+                
+                // Try to move up if we're below the end
+                if (currentRow > endRow) {
+                    possibleMoves.push({ row: currentRow - 1, col: currentCol });
+                }
+                
+                // Try to move right if we're to the left of the end
+                if (currentCol < endCol) {
+                    possibleMoves.push({ row: currentRow, col: currentCol + 1 });
+                }
+                
+                // Try to move left if we're to the right of the end
+                if (currentCol > endCol) {
+                    possibleMoves.push({ row: currentRow, col: currentCol - 1 });
+                }
+                
+                // Add some randomness - maybe move in a different direction
+                if (Math.random() < 0.3) {
+                    if (Math.random() < 0.5 && currentRow > 0 && currentRow < size - 1) {
+                        possibleMoves.push({ row: currentRow + (Math.random() < 0.5 ? 1 : -1), col: currentCol });
+                    } else if (currentCol > 0 && currentCol < size - 1) {
+                        possibleMoves.push({ row: currentRow, col: currentCol + (Math.random() < 0.5 ? 1 : -1) });
+                    }
+                }
+                
+                // Filter out invalid or already visited cells
+                possibleMoves = possibleMoves.filter(move => {
+                    return move.row >= 0 && move.row < size && 
+                           move.col >= 0 && move.col < size && 
+                           maze[move.row][move.col] === 0;
+                });
+                
+                // If no valid moves, break out
+                if (possibleMoves.length === 0) {
+                    // Try to head directly to the end
+                    if (currentRow !== endRow) {
+                        currentRow += currentRow < endRow ? 1 : -1;
+                    } else if (currentCol !== endCol) {
+                        currentCol += currentCol < endCol ? 1 : -1;
+                    }
+                    
+                    // Make sure we're in bounds
+                    currentRow = Math.max(0, Math.min(size - 1, currentRow));
+                    currentCol = Math.max(0, Math.min(size - 1, currentCol));
+                    
+                    maze[currentRow][currentCol] = 1;
+                    path.push({ row: currentRow, col: currentCol });
+                    continue;
+                }
+                
+                // Choose a random move
+                const nextMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                currentRow = nextMove.row;
+                currentCol = nextMove.col;
+                
+                // Mark the cell as part of the path
+                maze[currentRow][currentCol] = 1;
+                path.push({ row: currentRow, col: currentCol });
+            }
+        }
+        
+        // Start the game
+        function startGame() {
+            resetGame();
+            
+            if (currentDifficulty === 'challenge') {
+                level = 1;
+                initChallengeConfig();
+                updateLevelDisplay();
+            }
+            
+            generateMaze();
+            gameState = 'memorize';
+            startBtn.disabled = true;
+            difficultyOptions.forEach(opt => opt.style.pointerEvents = 'none');
+            
+            // Play sounds
+            playSound('start');
+            if (soundEnabled) {
+                sounds.background.currentTime = 0;
+                sounds.background.play();
+            }
+            
+            // Add pulse effect at start position
+            addPulseEffect(
+                startCell.col * getCellSize() + getCellSize()/2,
+                startCell.row * getCellSize() + getCellSize()/2,
+                getCellSize() * 1.5
+            );
+            
+            // Start countdown
+            timeRemaining = DIFFICULTY[currentDifficulty].viewTime;
+            updateTimerDisplay();
+            
+            countdownInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(countdownInterval);
+                    startPlayPhase();
+                }
+            }, 1000);
+            
+            drawMaze(true); // Show the path
+        }
+        
+        // Start the play phase
+        function startPlayPhase() {
+            gameState = 'play';
+            timeRemaining = 0;
+            updateTimerDisplay();
+            hintBtn.disabled = false;
+            drawMaze(false); // Hide the path
+            
+            // Reset player position to start
+            const cellSize = getCellSize();
+            playerPosition = {
+                x: startCell.col * cellSize + cellSize / 2,
+                y: startCell.row * cellSize + cellSize / 2
+            };
+            
+            // Reset keyboard position
+            keyboardPosition = { row: startCell.row, col: startCell.col };
+        }
+        
+        // Show hint (temporarily reveals the path)
+        function showHint() {
+            if (gameState !== 'play' || hintTimeRemaining > 0) return;
+            
+            gameState = 'hint';
+            hintTimeRemaining = 5;
+            hintBtn.disabled = true;
+            
+            // Play hint sound
+            playSound('hint');
+            
+            // Add pulse effect around player
+            addPulseEffect(playerPosition.x, playerPosition.y, getCellSize() * 3);
+            
+            drawMaze(true); // Show the path
+            
+            // Create hint timer
+            hintInterval = setInterval(() => {
+                hintTimeRemaining--;
+                
+                if (hintTimeRemaining <= 0) {
+                    clearInterval(hintInterval);
+                    gameState = 'play';
+                    drawMaze(false); // Hide the path again
+                    hintBtn.disabled = false;
+                }
+            }, 1000);
+        }
+        
+
+        // Handle mouse movement
+        function handleMouseMove(e) {
+            if (gameState !== 'play' && gameState !== 'hint') return;
+            
+            // Disable mouse if in keyboard mode
+            if (keyboardMode) return;
+
+            // Get mouse position relative to canvas, accounting for any scaling
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+            
+            // Only update if actively following path
+            if (followingPath) {
+                playerPosition = { x: mouseX, y: mouseY };
+                    
+                
+                // Check if player is on path
+                const isOnPath = checkPathCollision();
+                
+                // Add flame effect at player position
+                addFlame(mouseX, mouseY);
+                
+                // Play flame sound occasionally
+                if (Math.random() < 0.05) {
+                    playSound('flame');
+                }
+                
+                if (!isOnPath) {
+                    // Player went off path
+                    loseLife();
+                } else {
+                    // Check if player reached the end
+                    const cellSize = getCellSize();
+                    const endX = endCell.col * cellSize + cellSize / 2;
+                    const endY = endCell.row * cellSize + cellSize / 2;
+                    
+                    if (Math.hypot(mouseX - endX, mouseY - endY) < cellSize / 2) {
+                        winGame();
+                    }
+                }
+                
+                // Redraw maze
+                drawMaze(gameState === 'hint');
+            }
+        }
+        
+        // Check if the player is on the path
+        function checkPathCollision() {
+            const cellSize = getCellSize();
+            const row = Math.floor(playerPosition.y / cellSize);
+            const col = Math.floor(playerPosition.x / cellSize);
+            
+            // Check if in bounds
+            if (row < 0 || row >= maze.length || col < 0 || col >= maze[0].length) {
+                return false;
+            }
+            
+            // Check if on path
+            return maze[row][col] === 1;
+        }
+    
+        
+        // Handle keyboard navigation
+        function handleKeyboardNavigation(key) {
+            if (gameState !== 'play' && gameState !== 'hint') return;
+            
+            // Enable keyboard mode on first keyboard navigation
+            if (!keyboardMode) {
+                keyboardMode = true;
+                
+                // Set initial keyboard position if needed
+                if (!keyboardPosition.row && !keyboardPosition.col) {
+                    keyboardPosition = { row: startCell.row, col: startCell.col };
+                }
+            }
+            
+            let newRow = keyboardPosition.row;
+            let newCol = keyboardPosition.col;
+            
+            // Move based on arrow key
+            switch(key) {
+                case 'ArrowUp':
+                    newRow--;
+                    break;
+                case 'ArrowDown':
+                    newRow++;
+                    break;
+                case 'ArrowLeft':
+                    newCol--;
+                    break;
+                case 'ArrowRight':
+                    newCol++;
+                    break;
+            }
+            
+            // Check if new position is within bounds
+            if (newRow >= 0 && newRow < maze.length && newCol >= 0 && newCol < maze[0].length) {
+                keyboardPosition = { row: newRow, col: newCol };
+                
+                // Update player position to center of the cell
+                const cellSize = getCellSize();
+                playerPosition = {
+                    x: keyboardPosition.col * cellSize + cellSize / 2,
+                    y: keyboardPosition.row * cellSize + cellSize / 2
+                };
+                
+                // Add flame effect at player position
+                addFlame(playerPosition.x, playerPosition.y);
+                playSound('flame');
+                
+                // Check if player is on path
+                const isOnPath = maze[keyboardPosition.row][keyboardPosition.col] === 1;
+                
+                if (!isOnPath) {
+                    // Player went off path
+                    loseLife();
+                } else {
+                    // Check if player reached the end
+                    if (keyboardPosition.row === endCell.row && keyboardPosition.col === endCell.col) {
+                        winGame();
+                    }
+                }
+                
+                // Redraw maze
+                drawMaze(gameState === 'hint');
+            }
+        }
+        
+        // Add a flame effect at the specified position
+        function addFlame(x, y) {
+            const flameSize = 10 + Math.random() * 10;
+            const flameLife = 20 + Math.random() * 10;
+            
+            // Create main flame
+            flames.push({
+                x: x,
+                y: y,
+                size: flameSize,
+                color: `hsl(${Math.random() * 30 + 10}, 100%, 65%)`,
+                life: flameLife
+            });
+            
+            // Sometimes add smaller flames for more detail
+            if (Math.random() < 0.3) {
+                flames.push({
+                    x: x + (Math.random() * 6 - 3),
+                    y: y + (Math.random() * 6 - 6), // Mostly upward
+                    size: flameSize * 0.6,
+                    color: `hsl(${Math.random() * 20 + 40}, 100%, 70%)`,
+                    life: flameLife * 0.8
+                });
+            }
+            
+            // Add tiny spark particles occasionally
+            if (Math.random() < 0.1) {
+                const particleCount = 1 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = -Math.PI/2 + (Math.random() * Math.PI/2 - Math.PI/4);
+                    const speed = 0.5 + Math.random() * 2;
+                    
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: 1 + Math.random() * 3,
+                        color: `hsl(${Math.random() * 60 + 10}, 100%, 75%)`,
+                        life: 15 + Math.random() * 10
+                    });
+                }
+            }
+            
+            // Limit number of flames for performance
+            if (flames.length > 30) {
+                flames.shift();
+            }
+        }
+        
+        // Update flames animation
+        function updateFlames() {
+            for (let i = flames.length - 1; i >= 0; i--) {
+                flames[i].life--;
+                
+                // Apply slight upward movement to simulate rising
+                flames[i].y -= 0.5;
+                
+                // Random slight sideways drift
+                flames[i].x += Math.sin(flames[i].life * 0.1) * 0.3;
+                
+                if (flames[i].life <= 0) {
+                    flames.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update particles animation
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].life--;
+                
+                // Apply velocity
+                particles[i].x += particles[i].vx;
+                particles[i].y += particles[i].vy;
+                
+                // Add gravity effect
+                particles[i].vy -= 0.05;
+                
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Add pulse effect
+        function addPulseEffect(x, y, size) {
+            pulseEffects.push({
+                x: x,
+                y: y,
+                size: size,
+                maxSize: size,
+                opacity: 1,
+                life: 30
+            });
+        }
+        
+        // Update pulse effects
+        function updatePulseEffects() {
+            for (let i = pulseEffects.length - 1; i >= 0; i--) {
+                pulseEffects[i].life--;
+                pulseEffects[i].opacity = pulseEffects[i].life / 30;
+                
+                if (pulseEffects[i].life <= 0) {
+                    pulseEffects.splice(i, 1);
+                }
+            }
+        }
+        
+        // Draw flames
+        function drawFlames() {
+            for (const flame of flames) {
+                const opacity = flame.life / 30;
+                
+                // Gradient for more realistic flame
+                const gradient = ctx.createRadialGradient(
+                    flame.x, flame.y, 1,
+                    flame.x, flame.y, flame.size
+                );
+                
+                gradient.addColorStop(0, `hsla(30, 100%, 75%, ${opacity})`);
+                gradient.addColorStop(0.3, `hsla(20, 100%, 65%, ${opacity * 0.9})`);
+                gradient.addColorStop(1, `hsla(10, 100%, 50%, 0)`);
+                
+                ctx.beginPath();
+                ctx.fillStyle = gradient;
+                ctx.shadowColor = 'rgba(255, 69, 0, 0.7)';
+                ctx.shadowBlur = 15;
+                
+                // Draw flame as teardrop shape
+                const height = flame.size * 1.5;
+                
+                ctx.beginPath();
+                ctx.moveTo(flame.x, flame.y - height);
+                ctx.bezierCurveTo(
+                    flame.x + flame.size, flame.y - height/2,
+                    flame.x + flame.size/2, flame.y + height/3,
+                    flame.x, flame.y + flame.size/2
+                );
+                ctx.bezierCurveTo(
+                    flame.x - flame.size/2, flame.y + height/3,
+                    flame.x - flame.size, flame.y - height/2,
+                    flame.x, flame.y - height
+                );
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+        
+        // Draw particles
+        function drawParticles() {
+            for (const particle of particles) {
+                const opacity = particle.life / 20;
+                
+                ctx.beginPath();
+                ctx.fillStyle = `${particle.color.slice(0, -1)}, ${opacity})`;
+                ctx.shadowColor = particle.color;
+                ctx.shadowBlur = 5;
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+        
+        // Draw pulse effects
+        function drawPulseEffects() {
+            for (const pulse of pulseEffects) {
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(255, 107, 53, ${pulse.opacity * 0.3})`;
+                ctx.arc(pulse.x, pulse.y, pulse.size * (1 - pulse.opacity * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Lose a life
+        function loseLife() {
+            lives--;
+            updateLivesDisplay();
+            
+            // Play lose sound
+            playSound('lose');
+            
+            // Add flame burst effect
+            const particleCount = 20;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 3;
+                const distance = 10 + Math.random() * 40;
+                
+                particles.push({
+                    x: playerPosition.x,
+                    y: playerPosition.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 3 + Math.random() * 5,
+                    color: `hsl(${Math.random() * 30 + 10}, 100%, ${Math.random() * 30 + 60}%)`,
+                    life: 30 + Math.random() * 20
+                });
+            }
+            
+            // Briefly pause and show the path
+            gameState = 'hint';
+            drawMaze(true);
+            
+            setTimeout(() => {
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    // Reset player position and continue
+                    const cellSize = getCellSize();
+                    playerPosition = {
+                        x: startCell.col * cellSize + cellSize / 2,
+                        y: startCell.row * cellSize + cellSize / 2
+                    };
+                    
+                    // Reset keyboard position if in keyboard mode
+                    if (keyboardMode) {
+                        keyboardPosition = { row: startCell.row, col: startCell.col };
+                    }
+                    
+                    gameState = 'play';
+                    drawMaze(false);
+                    
+                    // Add pulse effect at start position
+                    addPulseEffect(
+                        startCell.col * cellSize + cellSize/2,
+                        startCell.row * cellSize + cellSize/2,
+                        cellSize
+                    );
+                }
+            }, 1000);
+        }
+        
+        // Game over
+        function gameOver() {
+            gameState = 'gameOver';
+            clearInterval(countdownInterval);
+            clearInterval(hintInterval);
+            
+            // Stop background music, play lose sound
+            sounds.background.pause();
+            playSound('lose');
+            
+            resultText.textContent = "Game Over!";
+            resultDetails.textContent = `You ran out of lives on level ${level}. Try again!`;
+            resultModal.classList.remove('hidden');
+            
+            startBtn.disabled = false;
+            hintBtn.disabled = true;
+            difficultyOptions.forEach(opt => opt.style.pointerEvents = 'auto');
+        }
+        
+        // Win the game
+        function winGame() {
+            if (currentDifficulty === 'challenge') {
+                // In challenge mode, advance to next level
+                advanceLevel();
+                return;
+            }
+            
+            gameState = 'win';
+            clearInterval(countdownInterval);
+            clearInterval(hintInterval);
+            
+            // Stop background music, play win sound
+            sounds.background.pause();
+            playSound('win');
+            
+            resultText.textContent = "You Win!";
+            resultDetails.textContent = `Congratulations! You completed the ${currentDifficulty} maze with ${lives} lives remaining.`;
+            resultModal.classList.remove('hidden');
+            
+            startBtn.disabled = false;
+            hintBtn.disabled = true;
+            difficultyOptions.forEach(opt => opt.style.pointerEvents = 'auto');
+        }
+        
+        // Advance to next level (challenge mode)
+        function advanceLevel() {
+            level++;
+            updateLevelDisplay();
+            
+            // Play win sound for level completion
+            playSound('win');
+            
+            // Add pulse effects for celebration
+            const cellSize = getCellSize();
+            const endX = endCell.col * cellSize + cellSize / 2;
+            const endY = endCell.row * cellSize + cellSize / 2;
+            
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    addPulseEffect(endX, endY, cellSize * (2 + i));
+                }, i * 300);
+            }
+            
+            // Short delay before next level
+            setTimeout(() => {
+                // Update challenge configuration for next level
+                initChallengeConfig();
+                
+                // Generate new maze for next level
+                generateMaze();
+                
+                // Reset player to start position
+                const cellSize = getCellSize();
+                playerPosition = {
+                    x: startCell.col * cellSize + cellSize / 2,
+                    y: startCell.row * cellSize + cellSize / 2
+                };
+                
+                // Start memorize phase for next level
+                gameState = 'memorize';
+                timeRemaining = DIFFICULTY[currentDifficulty].viewTime;
+                updateTimerDisplay();
+                
+                // Add pulse effect at start position
+                addPulseEffect(
+                    startCell.col * cellSize + cellSize/2,
+                    startCell.row * cellSize + cellSize/2,
+                    cellSize * 1.5
+                );
+                
+                // Start countdown for memorization
+                countdownInterval = setInterval(() => {
+                    timeRemaining--;
+                    updateTimerDisplay();
+                    
+                    if (timeRemaining <= 0) {
+                        clearInterval(countdownInterval);
+                        startPlayPhase();
+                    }
+                }, 1000);
+                
+                drawMaze(true); // Show the path
+            }, 2000);
+        }
+        
+        // Reset the game
+        function resetGame() {
+            gameState = 'idle';
+            timeRemaining = DIFFICULTY[currentDifficulty].viewTime;
+            lives = 3;
+            flames = [];
+            particles = [];
+            pulseEffects = [];
+            keyboardMode = false;
+            
+            clearInterval(countdownInterval);
+            clearInterval(hintInterval);
+            
+            // Stop sounds
+            sounds.background.pause();
+            
+            updateTimerDisplay();
+            updateLivesDisplay();
+            drawInstructions();
+            
+            startBtn.disabled = false;
+            hintBtn.disabled = true;
+        }
+        
+        // Update the timer display
+        function updateTimerDisplay() {
+            timerDisplay.textContent = `Time: ${timeRemaining}s`;
+        }
+        
+        // Update the lives display
+        function updateLivesDisplay() {
+            livesDisplay.textContent = `Lives: ${'❤️'.repeat(lives)}`;
+        }
+        
+        // Update level display
+        function updateLevelDisplay() {
+            levelDisplay.textContent = `Level: ${level}`;
+        }
+        
+        // Draw the maze
+        function drawMaze(showPath) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (gameState === 'idle') {
+                drawInstructions();
+                return;
+            }
+            
+            const cellSize = getCellSize();
+            
+            // Draw the background
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw darkness effect for challenge mode
+            let darknessMask = null;
+            if (currentDifficulty === 'challenge' && 
+                challengeConfig.specialEffect === 'darkness' && 
+                gameState === 'play') {
+                
+                darknessMask = ctx.createRadialGradient(
+                    playerPosition.x, playerPosition.y, cellSize * 0.5,
+                    playerPosition.x, playerPosition.y, cellSize * 3
+                );
+                darknessMask.addColorStop(0, 'rgba(0,0,0,0)');
+                darknessMask.addColorStop(1, 'rgba(0,0,0,0.95)');
+            }
+            
+            // If in memorize phase or hint, show the maze
+            if (showPath) {
+                // Draw the cells
+                for (let row = 0; row < maze.length; row++) {
+                    for (let col = 0; col < maze[row].length; col++) {
+                        const x = col * cellSize;
+                        const y = row * cellSize;
+                        
+                        if (maze[row][col] === 1) {
+                            // Path
+                            let pathColor = '#ff6b35';
+                            
+                            // For challenge mode with moving walls
+                            if (currentDifficulty === 'challenge' && 
+                                challengeConfig.specialEffect === 'moving' && 
+                                gameState === 'play') {
+                                
+                                // Make some path sections pulse/shift
+                                const timeOffset = Date.now() / 1000;
+                                const distFromCenter = Math.hypot(
+                                    col - maze.length/2, 
+                                    row - maze.length/2
+                                );
+                                
+                                const pulseFactor = Math.sin(timeOffset * 2 + distFromCenter) * 0.5 + 0.5;
+                                pathColor = `hsl(${20 + pulseFactor * 20}, 100%, ${50 + pulseFactor * 20}%)`;
+                            }
+                            
+                            ctx.fillStyle = pathColor;
+                            ctx.fillRect(x, y, cellSize, cellSize);
+                            
+                            // Glow effect for path
+                            ctx.shadowColor = 'rgba(255, 107, 53, 0.6)';
+                            ctx.shadowBlur = 10;
+                            ctx.fillRect(x + cellSize/4, y + cellSize/4, cellSize/2, cellSize/2);
+                            ctx.shadowBlur = 0;
+                        }
+                    }
+                }
+                
+                // Draw start and end
+                ctx.fillStyle = '#4CAF50';
+                ctx.beginPath();
+                ctx.arc(
+                    startCell.col * cellSize + cellSize / 2, 
+                    startCell.row * cellSize + cellSize / 2, 
+                    cellSize / 3, 0, Math.PI * 2
+                );
+                ctx.fill();
+                
+                ctx.fillStyle = '#E91E63';
+                ctx.beginPath();
+                ctx.arc(
+                    endCell.col * cellSize + cellSize / 2, 
+                    endCell.row * cellSize + cellSize / 2, 
+                    cellSize / 3, 0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+            
+            // Apply darkness mask if needed
+            if (darknessMask) {
+                ctx.fillStyle = darknessMask;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // Update and draw visual effects
+            updateFlames();
+            updateParticles();
+            updatePulseEffects();
+            
+            drawPulseEffects();
+            drawParticles();
+            drawFlames();
+            
+            // Draw the player (flame) if in play phase
+            if (gameState === 'play' || gameState === 'hint') {
+                // Draw glow around player position
+                ctx.beginPath();
+                const gradient = ctx.createRadialGradient(
+                    playerPosition.x, playerPosition.y, 0,
+                    playerPosition.x, playerPosition.y, cellSize
+                );
+                gradient.addColorStop(0, 'rgba(255, 107, 53, 0.5)');
+                gradient.addColorStop(1, 'rgba(255, 107, 53, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.arc(playerPosition.x, playerPosition.y, cellSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw current cell highlight if in keyboard mode
+                if (keyboardMode) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(
+                        keyboardPosition.col * cellSize, 
+                        keyboardPosition.row * cellSize, 
+                        cellSize, 
+                        cellSize
+                    );
+                }
+            }
+        }
+        
+        //Resize the canva to the normal size
+        function resizeCanvas() {
+            const container = document.querySelector('.game-container');
+            const canvas = document.getElementById('game-canvas');
+            
+            // Get the computed size of the container
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            // Update canvas dimensions
+            canvas.width = containerWidth;
+            canvas.height = containerHeight;
+            
+            // Redraw the maze if game is active
+            if (gameState !== 'idle') {
+                drawMaze(gameState === 'memorize' || gameState === 'hint');
+            } else {
+                drawInstructions();
+            }
+        }
+
+        // Draw initial instructions
+        function drawInstructions() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Create radial gradient background
+            const gradient = ctx.createRadialGradient(
+                canvas.width/2, canvas.height/2, 50,
+                canvas.width/2, canvas.height/2, canvas.width/1.5
+            );
+            gradient.addColorStop(0, 'rgba(255, 107, 53, 0.2)');
+            gradient.addColorStop(1, 'rgba(25, 25, 46, 0.8)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Title
+            ctx.fillStyle = '#ff6b35';
+            ctx.font = 'bold 36px Montserrat, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(255, 107, 53, 0.7)';
+            ctx.shadowBlur = 15;
+            ctx.fillText('FIRE PATH MEMORY MAZE', canvas.width / 2, canvas.height / 2 - 80);
+            
+            // Instructions
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px Montserrat, sans-serif';
+            ctx.fillText('Press Start to begin the game', canvas.width / 2, canvas.height / 2 - 20);
+            ctx.fillText('Memorize the path, then follow it with your mouse', canvas.width / 2, canvas.height / 2 + 10);
+            ctx.fillText('or use arrow keys to navigate', canvas.width / 2, canvas.height / 2 + 40);
+            ctx.fillText('Press H for a hint if you get lost', canvas.width / 2, canvas.height / 2 + 70);
+            
+            // Draw decorative flames
+            for (let i = 0; i < 15; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const size = 10 + Math.random() * 30;
+                
+                ctx.beginPath();
+                const flameGradient = ctx.createRadialGradient(
+                    x, y, 0,
+                    x, y, size
+                );
+                flameGradient.addColorStop(0, 'rgba(255, 170, 59, 0.8)');
+                flameGradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+                
+                ctx.fillStyle = flameGradient;
+                ctx.shadowColor = 'rgba(255, 69, 0, 0.7)';
+                ctx.shadowBlur = 15;
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+        
+        // Initialize the game
+        function init() {
+            // Load sounds
+            initSounds();
+            
+            // Set up difficulty options
+            difficultyOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    playSound('click');
+                    difficultyOptions.forEach(opt => opt.classList.remove('active'));
+                    option.classList.add('active');
+                    currentDifficulty = option.getAttribute('data-difficulty');
+                    
+                    // Show challenge modes if challenge difficulty selected
+                    if (currentDifficulty === 'challenge') {
+                        challengeModes.style.display = 'flex';
+                        initChallengeConfig();
+                    } else {
+                        challengeModes.style.display = 'none';
+                        timeRemaining = DIFFICULTY[currentDifficulty].viewTime;
+                    }
+                    
+                    updateTimerDisplay();
+                });
+            });
+            
+
+            // Add window resize event listener
+            window.addEventListener('resize', resizeCanvas);
+
+            // Set up challenge mode options
+            challengeOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    playSound('click');
+                    challengeOptions.forEach(opt => opt.classList.remove('active'));
+                    option.classList.add('active');
+                    currentChallenge = option.getAttribute('data-challenge');
+                    initChallengeConfig();
+                });
+            });
+            
+            // Set up event listeners
+            startBtn.addEventListener('click', () => {
+                playSound('click');
+                startGame();
+            });
+            
+            hintBtn.addEventListener('click', () => {
+                playSound('click');
+                showHint();
+            });
+            
+            playAgainBtn.addEventListener('click', () => {
+                playSound('click');
+                resultModal.classList.add('hidden');
+                resetGame();
+            });
+            
+            volumeControl.addEventListener('click', () => {
+                toggleSound();
+                playSound('click');
+            });
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case 'h':
+                    case 'H':
+                        if (gameState === 'play' && !hintBtn.disabled) {
+                            showHint();
+                        }
+                        break;
+                    case ' ':
+                        if (gameState === 'idle' && !startBtn.disabled) {
+                            startGame();
+                        } else if (gameState === 'play') {
+                            // Pause functionality could be added here
+                        }
+                        break;
+                    case 'r':
+                    case 'R':
+                        if (gameState !== 'idle') {
+                            resetGame();
+                        }
+                        break;
+                    // Arrow keys for navigation
+                    case 'ArrowUp':
+                    case 'ArrowDown':
+                    case 'ArrowLeft':
+                    case 'ArrowRight':
+                        handleKeyboardNavigation(e.key);
+                        break;
+                }
+            });
+            
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseenter', () => { followingPath = true; });
+            canvas.addEventListener('mouseleave', () => { followingPath = false; });
+            
+            // Initial render
+            updateTimerDisplay();
+            updateLivesDisplay();
+            drawInstructions();
+            resizeCanvas();
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (gameState !== 'idle') {
+                drawMaze(gameState === 'memorize' || gameState === 'hint');
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize game and start loop
+        init();
+        gameLoop();
+    </script>
+</body>
+</html>
