@@ -3,35 +3,762 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sample Test Page</title>
+    <title>Less Than 100KB</title>
     <style>
+        /* Base styles */
         body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f4f4f4;
-            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+            text-align: center;
         }
-        h1 {
-            color: #2c3e50;
+        
+        /* CRT effect */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 999;
         }
-        p {
-            font-size: 18px;
-        }
+        
+        /* Main container */
         .container {
-            background: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            max-width: 600px;
-            margin: auto;
+        }
+        
+        /* Title */
+        .title-container {
+            position: relative;
+            height: 200px;
+            margin: 20px 0;
+        }
+        
+        .title {
+            font-size: 3.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-shadow: 
+                0 0 5px #0f0,
+                0 0 10px #0f0,
+                0 0 15px #0f0;
+            white-space: nowrap;
+            letter-spacing: 2px;
+            position: relative;
+        }
+        
+        /* Tetris blocks inside text */
+        .tetris-text {
+            position: relative;
+            display: inline-block;
+            color: transparent;
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+        
+        /* Character animations area */
+        .character-stage {
+            position: relative;
+            width: 100%;
+            height: 80px;
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+        
+        /* Pixel character */
+        .pixel-character {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        
+        /* Categories */
+        .categories {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0 10px;
+        }
+        
+        .category-btn {
+            background: rgba(0, 60, 0, 0.7);
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 8px 20px;
+            margin: 0 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .category-btn:hover {
+            background: rgba(0, 100, 0, 0.7);
+            box-shadow: 0 0 10px #0f0;
+        }
+        
+        .category-btn.active {
+            background: rgba(0, 150, 0, 0.7);
+            box-shadow: 0 0 15px #0f0;
+        }
+        
+        .category-btn::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.4), transparent);
+            transition: 0.5s;
+        }
+        
+        .category-btn:hover::after {
+            left: 100%;
+        }
+        
+        /* Collections section */
+        .collections {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+            margin-top: 20px;
+            perspective: 1000px;
+        }
+        
+        .collection-item {
+            background: rgba(0, 50, 0, 0.5);
+            border: 2px solid #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        
+        .collection-item:hover {
+            transform: translateY(-5px) rotateY(10deg);
+            box-shadow: 0 10px 20px rgba(0, 255, 0, 0.3);
+        }
+        
+        .collection-item h3 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #0f0;
+        }
+        
+        .collection-item p {
+            font-size: 0.9rem;
+            color: #afa;
+        }
+        
+        .kb-size {
+            font-weight: bold;
+            color: #ff0;
+        }
+        
+        /* Terminal message */
+        .terminal-message {
+            width: 100%;
+            max-width: 700px;
+            height: 100px;
+            background: rgba(0, 20, 0, 0.8);
+            border: 2px solid #0f0;
+            margin: 40px auto 20px;
+            padding: 10px;
+            overflow: hidden;
+            position: relative;
+            font-family: 'Courier New', monospace;
+            text-align: left;
+        }
+        
+        .terminal-text {
+            position: absolute;
+            white-space: pre-wrap;
+            color: #0f0;
+            animation: scrollMessage 30s linear infinite;
+            padding: 10px;
+            line-height: 1.5;
+        }
+        
+        @keyframes scrollMessage {
+            0% {
+                top: 100%;
+            }
+            100% {
+                top: -250%;
+            }
+        }
+        
+        .terminal-message::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(transparent 80%, rgba(0, 20, 0, 0.8));
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .blinking-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background: #0f0;
+            animation: blink 1s steps(2) infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        /* Footer */
+        footer {
+            margin-top: 30px;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: #0a0;
+        }
+        
+        .heart {
+            color: #f00;
+            animation: pulse 1.5s infinite;
+            display: inline-block;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        /* Scanline effect */
+        @keyframes scanline {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(100vh);
+            }
+        }
+        
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 0, 0.3);
+            opacity: 0.75;
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Glitch effect */
+        @keyframes glitch {
+            0% {
+                transform: translate(0);
+            }
+            20% {
+                transform: translate(-2px, 2px);
+            }
+            40% {
+                transform: translate(-2px, -2px);
+            }
+            60% {
+                transform: translate(2px, 2px);
+            }
+            80% {
+                transform: translate(2px, -2px);
+            }
+            100% {
+                transform: translate(0);
+            }
+        }
+        
+        .glitch {
+            animation: glitch 0.5s infinite;
+            animation-play-state: paused;
+        }
+        
+        .title:hover .glitch {
+            animation-play-state: running;
+        }
+
+        /* Intro animation */
+        @keyframes intro {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .intro-anim {
+            animation: intro 1.5s ease-out forwards;
+        }
+        
+        .intro-delay-1 {
+            animation-delay: 0.2s;
+        }
+        
+        .intro-delay-2 {
+            animation-delay: 0.4s;
+        }
+        
+        .intro-delay-3 {
+            animation-delay: 0.6s;
+        }
+        
+        .vintage-tag {
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: #8f8;
+            margin-top: 10px;
+            border-top: 1px dashed #0f0;
+            border-bottom: 1px dashed #0f0;
+            padding: 5px 0;
+            width: 80%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* COMING SOON styles */
+        .coming-soon-container {
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .coming-soon {
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: #ff0;
+            text-shadow: 
+                0 0 5px #ff0,
+                0 0 10px #ff0,
+                0 0 15px #0f0;
+            animation: glow 1.5s ease-in-out infinite alternate;
+            position: relative;
+        }
+        
+        @keyframes glow {
+            from {
+                text-shadow: 
+                    0 0 5px #ff0,
+                    0 0 10px #ff0,
+                    0 0 15px #0f0;
+            }
+            to {
+                text-shadow: 
+                    0 0 10px #ff0,
+                    0 0 20px #ff0,
+                    0 0 30px #0f0,
+                    0 0 40px #0f0;
+            }
+        }
+        
+        .coming-soon::before, 
+        .coming-soon::after {
+            content: "";
+            display: inline-block;
+            height: 2px;
+            width: 40px;
+            background: #ff0;
+            box-shadow: 0 0 10px #ff0;
+            vertical-align: middle;
+            margin: 0 15px;
+        }
+        
+        /* Digital countdown effect below COMING SOON */
+        .digital-countdown {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: #0f0;
+            margin-top: 10px;
+            letter-spacing: 3px;
+        }
+        
+        /* Blinking effect for COMING SOON */
+        @keyframes blink-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .blink-effect {
+            animation: blink-text 3s linear infinite;
         }
     </style>
 </head>
 <body>
+    <div class="scanline"></div>
+    
     <div class="container">
-        <h1>Welcome to the Sample Test Page</h1>
-        <p>This is a basic HTML file to test your website setup. You can add more elements here to build your page.</p>
-        <p>Feel free to modify this content as needed!</p>
+        <!-- Character animations -->
+        <div class="character-stage intro-anim">
+            <!-- Characters will be added via JavaScript -->
+        </div>
+        
+        <!-- Main title -->
+        <div class="title-container intro-anim intro-delay-1">
+            <div class="title">Less Than <span class="tetris-text">100</span> KB</div>
+        </div>
+        
+        <!-- Intro text -->
+        <div class="intro-text intro-anim intro-delay-2">
+            <p>A collection of awesome games, tools, and demos under 100KB</p>
+            <p>Because creativity thrives within constraints</p>
+            <p class="vintage-tag"><span>EST. 2025</span> | <span>NOSTALGIA REIMAGINED</span></p>
+        </div>
+        
+        <!-- Terminal Message -->
+        <div class="terminal-message intro-anim intro-delay-3">
+            <div class="terminal-text">
+> In the world of AI and LLMs, many of us lost the fun games and memories that we grew up with.
+> 
+> And also in this high-memory era, we want to bring back the old small fun games, where only fun mattered.
+>
+> Remember when games didn't need gigabytes of space? When creativity flourished within limitations?
+> When a simple idea could bring hours of joy?
+>
+> I hope this initiative would touch at least one person with similar interests.
+>
+> Please join and make your ideas come to life. Share your sub-100KB creations and let's
+> build a community that celebrates the beauty of simplicity.
+>
+> Because sometimes, less really is more.
+            <span class="blinking-cursor"></span>
+            </div>
+        </div>
+        
+        <!-- COMING SOON section - Added here -->
+        <div class="coming-soon-container intro-anim">
+            <div class="coming-soon blink-effect">COMING SOON</div>
+            <div class="digital-countdown" id="countdown">INIT<span class="blinking-cursor"></span></div>
+        </div>
+        
+        <!-- Categories -->
+        <div class="categories intro-anim intro-delay-2">
+            <button class="category-btn active" data-category="all">All</button>
+            <button class="category-btn" data-category="games">Games</button>
+            <button class="category-btn" data-category="tools">Tools</button>
+        </div>
+        
+        <!-- Collections -->
+        <div class="collections intro-anim intro-delay-3">
+            <div class="collection-item" data-category="games">
+                <h3>Snake Game</h3>
+                <p>Classic snake game with retro graphics</p>
+                <p class="kb-size">42 KB</p>
+            </div>
+            <div class="collection-item" data-category="tools">
+                <h3>Pixel Editor</h3>
+                <p>Create 8-bit art with simple tools</p>
+                <p class="kb-size">78 KB</p>
+            </div>
+            <div class="collection-item" data-category="games">
+                <h3>Text Adventure</h3>
+                <p>Fight monsters in a fantasy world</p>
+                <p class="kb-size">36 KB</p>
+            </div>
+            <div class="collection-item" data-category="tools">
+                <h3>Chip Tunes</h3>
+                <p>8-bit music generator</p>
+                <p class="kb-size">95 KB</p>
+            </div>
+            <div class="collection-item" data-category="games">
+                <h3>Tetris Clone</h3>
+                <p>Block stacking puzzle game</p>
+                <p class="kb-size">67 KB</p>
+            </div>
+            <div class="collection-item" data-category="games">
+                <h3>Pong</h3>
+                <p>Two-player classic paddle game</p>
+                <p class="kb-size">28 KB</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Built with <span class="heart">❤️</span> and open-source | © 2025</p>
+        </footer>
     </div>
+
+    <script>
+        // Character animation
+        document.addEventListener('DOMContentLoaded', function() {
+            const stage = document.querySelector('.character-stage');
+            const stageWidth = stage.offsetWidth;
+            
+            // Character types
+            const characters = [
+                { type: 'runner', speed: 3, y: 60 },
+                { type: 'jumper', speed: 2, y: 30 },
+                { type: 'faller', speed: 4, y: 10 }
+            ];
+            
+            // Create characters
+            characters.forEach(char => {
+                createCharacter(char.type, char.speed, char.y);
+            });
+            
+            function createCharacter(type, speed, yPos) {
+                const char = document.createElement('div');
+                char.className = 'pixel-character';
+                
+                // Set starting position off-screen
+                let xPos = -50;
+                if (Math.random() > 0.5) {
+                    xPos = stageWidth + 50;
+                    speed = -speed;
+                }
+                
+                char.style.left = xPos + 'px';
+                char.style.top = yPos + 'px';
+                
+                // Create simple pixel character using box-shadow
+                const style = document.createElement('style');
+                
+                // Different character designs based on type
+                let pixelArt = '';
+                
+                if (type === 'runner') {
+                    char.style.backgroundColor = '#0f0';
+                    char.style.borderRadius = '4px';
+                    // Add running animation
+                    char.style.animation = 'running 0.5s infinite alternate';
+                }
+                else if (type === 'jumper') {
+                    char.style.backgroundColor = '#ff0';
+                    char.style.borderRadius = '50%';
+                    // Add jumping animation
+                    char.style.animation = 'jumping 1s infinite';
+                }
+                else if (type === 'faller') {
+                    char.style.backgroundColor = '#f0f';
+                    char.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+                    // Add falling animation
+                    char.style.animation = 'falling 0.8s infinite alternate';
+                }
+                
+                document.head.appendChild(style);
+                stage.appendChild(char);
+                
+                // Move character
+                function moveCharacter() {
+                    xPos += speed;
+                    char.style.left = xPos + 'px';
+                    
+                    // Loop characters when they go off-screen
+                    if ((speed > 0 && xPos > stageWidth + 50) || 
+                        (speed < 0 && xPos < -50)) {
+                        // Reset to other side
+                        xPos = speed > 0 ? -50 : stageWidth + 50;
+                        // Randomize vertical position a bit
+                        char.style.top = (yPos + Math.random() * 20 - 10) + 'px';
+                    }
+                    
+                    requestAnimationFrame(moveCharacter);
+                }
+                
+                moveCharacter();
+            }
+            
+            // Add animations for character types
+            const animationStyles = document.createElement('style');
+            animationStyles.textContent = `
+                @keyframes running {
+                    0% { transform: scaleY(1); }
+                    100% { transform: scaleY(0.8); }
+                }
+                @keyframes jumping {
+                    0% { transform: translateY(0); }
+                    50% { transform: translateY(-20px); }
+                    100% { transform: translateY(0); }
+                }
+                @keyframes falling {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(animationStyles);
+            
+            // Tetris blocks animation inside text
+            const tetrisText = document.querySelector('.tetris-text');
+            
+            // Create tetris block animation
+            function animateTetrisText() {
+                // Create a canvas for the text
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = tetrisText.offsetWidth;
+                canvas.height = tetrisText.offsetHeight;
+                
+                // Clear and set font
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '3.5rem bold Courier New';
+                ctx.fillStyle = '#0f0';
+                ctx.textBaseline = 'top';
+                
+                // Draw text to get dimensions
+                ctx.fillText('100', 0, 0);
+                
+                // Create tetris block grid (simplified version)
+                const blockSize = 5;
+                const gridWidth = Math.ceil(canvas.width / blockSize);
+                const gridHeight = Math.ceil(canvas.height / blockSize);
+                
+                // Create tetris blocks that will move down
+                const blocks = [];
+                let blockId = 0;
+                
+                // Animation loop
+                function animate() {
+                    // Add new blocks at random positions at the top
+                    if (Math.random() < 0.2) {
+                        const x = Math.floor(Math.random() * gridWidth);
+                        const blockType = Math.floor(Math.random() * 5);
+                        const color = ['#0f0', '#ff0', '#f0f', '#0ff', '#f00'][blockType];
+                        blocks.push({
+                            id: blockId++,
+                            x: x * blockSize,
+                            y: -blockSize,
+                            size: blockSize,
+                            color: color,
+                            speed: 1 + Math.random()
+                        });
+                    }
+                    
+                    // Clear tetris-text background
+                    tetrisText.style.background = 'none';
+                    
+                    // Move all blocks down
+                    for (let i = blocks.length - 1; i >= 0; i--) {
+                        const block = blocks[i];
+                        block.y += block.speed;
+                        
+                        // Check if block is still inside the text area
+                        if (block.y > canvas.height) {
+                            blocks.splice(i, 1);
+                            continue;
+                        }
+                        
+                        // Create block element or update existing one
+                        let blockEl = document.getElementById('block-' + block.id);
+                        if (!blockEl) {
+                            blockEl = document.createElement('div');
+                            blockEl.id = 'block-' + block.id;
+                            blockEl.style.position = 'absolute';
+                            blockEl.style.width = block.size + 'px';
+                            blockEl.style.height = block.size + 'px';
+                            blockEl.style.backgroundColor = block.color;
+                            tetrisText.appendChild(blockEl);
+                        }
+                        
+                        // Position block
+                        blockEl.style.left = block.x + 'px';
+                        blockEl.style.top = block.y + 'px';
+                    }
+                    
+                    requestAnimationFrame(animate);
+                }
+                
+                animate();
+            }
+            
+            // Initialize tetris text animation
+            setTimeout(animateTetrisText, 1000);
+            
+            // Add glitch effect that triggers randomly
+            setInterval(() => {
+                const elements = document.querySelectorAll('.title, .collection-item');
+                const randomElement = elements[Math.floor(Math.random() * elements.length)];
+                randomElement.classList.add('glitch');
+                
+                setTimeout(() => {
+                    randomElement.classList.remove('glitch');
+                }, 500);
+            }, 3000);
+            
+            // Category filtering
+            const categoryBtns = document.querySelectorAll('.category-btn');
+            const collectionItems = document.querySelectorAll('.collection-item');
+            
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Update active button
+                    categoryBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const category = btn.getAttribute('data-category');
+                    
+                    // Filter items
+                    collectionItems.forEach(item => {
+                        if (category === 'all' || item.getAttribute('data-category') === category) {
+                            item.style.display = 'block';
+                            // Add a small animation when showing
+                            item.style.animation = 'intro 0.5s forwards';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
+            // Digital countdown animation
+            function updateCountdown() {
+                const countdown = document.getElementById('countdown');
+                const chars = "0123456789ABCDEF";
+                let text = "";
+                
+                // Generate random technical-looking text
+                for (let i = 0; i < 10; i++) {
+                    text += chars.charAt(Math.floor(Math.random() * chars.length));
+                    if (i % 2 === 1 && i < 8) text += ":";
+                }
+                
+                countdown.innerHTML = text + '<span class="blinking-cursor"></span>';
+                
+                // Update every 2 seconds
+                setTimeout(updateCountdown, 2000);
+            }
+            
+            // Start the countdown animation
+            setTimeout(updateCountdown, 1500);
+        });
+    </script>
 </body>
 </html>
