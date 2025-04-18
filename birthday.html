@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birthday Party Survey</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #fdf4ff;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 192, 203, 0.4) 0%, transparent 20%),
+                radial-gradient(circle at 80% 30%, rgba(147, 197, 253, 0.4) 0%, transparent 20%),
+                radial-gradient(circle at 30% 70%, rgba(253, 186, 116, 0.4) 0%, transparent 20%),
+                radial-gradient(circle at 70% 90%, rgba(167, 139, 250, 0.4) 0%, transparent 20%);
+            position: relative;
+            overflow-x: hidden;
+        }
+        .survey-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+        .form-control:focus {
+            border-color: #ec4899;
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.3);
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0.7;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+        .balloon {
+            position: absolute;
+            width: 40px;
+            height: 50px;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            animation: float 15s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(3deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(-3deg);
+            }
+        }
+        .cake-icon {
+            display: inline-block;
+            font-size: 2rem;
+            margin-right: 0.5rem;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        .custom-radio:checked + label {
+            background-color: #fbcfe8;
+            border-color: #ec4899;
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .party-border {
+            border: 3px dashed #ec4899;
+            border-radius: 1.5rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            position: relative;
+            overflow: hidden;
+        }
+        .party-border::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ec4899);
+            background-size: 200% 200%;
+            animation: gradient 4s linear infinite;
+        }
+        .banner {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6, #3b82f6, #ec4899);
+            background-size: 300% 100%;
+            animation: gradient 6s ease infinite;
+            color: white;
+            text-align: center;
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .banner::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%);
+            opacity: 0.4;
+            animation: shine 6s linear infinite;
+        }
+        @keyframes shine {
+            0% {
+                transform: scale(0.5) rotate(0deg);
+                opacity: 0.3;
+            }
+            50% {
+                opacity: 0.4;
+            }
+            100% {
+                transform: scale(0.5) rotate(360deg);
+                opacity: 0.3;
+            }
+        }
+        @keyframes gradient {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+        .birthday-heading {
+            font-family: 'Pacifico', cursive;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+        }
+        .section-title {
+            position: relative;
+            display: inline-block;
+            font-family: 'Pacifico', cursive;
+            margin-bottom: 1rem;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #ec4899, #8b5cf6);
+            border-radius: 3px;
+        }
+        
+        /* Fancy styles */
+        .sparkle {
+            position: absolute;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z' fill='%23FFD700' stroke='%23FFD700'/%3E%3C/svg%3E");
+            width: 24px;
+            height: 24px;
+            background-size: contain;
+            z-index: 5;
+        }
+        .gift-box {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            z-index: 1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .gift-top {
+            position: absolute;
+            top: 0;
+            left: 15%;
+            width: 70%;
+            height: 30%;
+            background-color: #ec4899;
+            border-radius: 5px 5px 0 0;
+        }
+        .gift-body {
+            position: absolute;
+            top: 30%;
+            width: 100%;
+            height: 70%;
+            background-color: #8b5cf6;
+            border-radius: 0 0 5px 5px;
+        }
+        .gift-ribbon {
+            position: absolute;
+            top: 0;
+            left: 40%;
+            width: 20%;
+            height: 100%;
+            background-color: #f59e0b;
+        }
+        .gift-ribbon-horizontal {
+            position: absolute;
+            top: 25%;
+            width: 100%;
+            height: 10%;
+            background-color: #f59e0b;
+            z-index: 1;
+        }
+        
+        /* Enhanced field styles */
+        .fancy-input {
+            transition: all 0.3s ease;
+            border-width: 2px;
+        }
+        .fancy-input:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.4);
+        }
+        .gradient-button {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6);
+            color: white;
+            font-weight: bold;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            border: none;
+            box-shadow: 0 10px 15px -3px rgba(236, 72, 153, 0.4);
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .gradient-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 25px -5px rgba(236, 72, 153, 0.4);
+        }
+        .gradient-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            z-index: -1;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+        .gradient-button:hover::after {
+            opacity: 1;
+        }
+        
+        .fancy-checkbox:checked + label {
+            background-color: #fdf2f8;
+            border-color: #ec4899;
+            box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.1);
+            transform: translateY(-2px);
+        }
+        .fancy-checkbox + label {
+            transition: all 0.2s ease;
+        }
+        
+        .party-section {
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .party-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .ribbon {
+            width: 150px;
+            height: 150px;
+            overflow: hidden;
+            position: absolute;
+            z-index: 1;
+        }
+        .ribbon-top-right {
+            top: -10px;
+            right: -10px;
+        }
+        .ribbon-top-right::before,
+        .ribbon-top-right::after {
+            border-top-color: transparent;
+            border-right-color: transparent;
+        }
+        .ribbon-top-right::before {
+            top: 0;
+            left: 0;
+        }
+        .ribbon-top-right::after {
+            bottom: 0;
+            right: 0;
+        }
+        .ribbon-top-right span {
+            left: -25px;
+            top: 30px;
+            transform: rotate(45deg);
+        }
+        .ribbon span {
+            position: absolute;
+            display: block;
+            width: 225px;
+            padding: 8px 0;
+            background-color: #ec4899;
+            box-shadow: 0 5px 10px rgba(0,0,0,.1);
+            color: #fff;
+            font-size: 13px;
+            text-shadow: 0 1px 1px rgba(0,0,0,.2);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen py-6 px-4 sm:px-6 relative">
+    <!-- Decorative elements -->
+    <div id="balloons"></div>
+    <div id="confetti"></div>
+    <div id="sparkles"></div>
+    <div id="gifts"></div>
+    
+    <div class="survey-container party-border p-6 sm:p-8 animate__animated animate__fadeIn">
+        <div class="ribbon ribbon-top-right"><span>Party Time!</span></div>
+        
+        <div class="banner animate__animated animate__pulse animate__infinite">
+            <h1 class="text-2xl sm:text-4xl font-bold birthday-heading">🎂 Birthday Party Survey 🎉</h1>
+        </div>
+        
+        <div class="text-center mb-8">
+            <p class="text-xl text-pink-600 font-semibold">Help us plan the perfect celebration!</p>
+            <div class="flex justify-center mt-4 space-x-4">
+                <span class="text-3xl animate__animated animate__swing animate__infinite">🎁</span>
+                <span class="text-3xl animate__animated animate__tada animate__infinite animate__slower">🎈</span>
+                <span class="text-3xl animate__animated animate__heartBeat animate__infinite animate__slow">🍰</span>
+                <span class="text-3xl animate__animated animate__bounce animate__infinite">🎊</span>
+                <span class="text-3xl animate__animated animate__swing animate__infinite animate__slow">🎵</span>
+            </div>
+        </div>
+
+        <!-- Form using Google Sheets -->
+        <form id="birthdaySurvey" class="space-y-8" onsubmit="submitToGoogleSheet(event)">
+            <!-- Basic Information -->
+            <div class="bg-pink-50 p-6 rounded-xl party-border party-section">
+                <h2 class="text-2xl font-semibold text-pink-600 mb-5 flex items-center section-title">
+                    <span class="cake-icon">🎂</span> Your Information
+                </h2>
+                <div class="grid grid-cols-1">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-pink-700 mb-2">Your Name</label>
+                        <input type="text" name="name" id="name" required class="form-control fancy-input w-full px-4 py-3 border border-pink-300 rounded-lg shadow-sm focus:outline-none bg-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences -->
+            <div class="bg-blue-50 p-6 rounded-xl party-border party-section">
+                <h2 class="text-2xl font-semibold text-blue-600 mb-5 flex items-center section-title">
+                    <span class="cake-icon">🎊</span> Party Preferences
+                </h2>
+                
+                <!-- Party vibe options with priority selection -->
+                <div class="mb-6">
+                    <span class="block text-lg font-medium text-blue-700 mb-3">What kind of party vibe? 🥳 (Select and prioritize)</span>
+                    <p class="text-sm text-blue-600 mb-4">Choose all options you like and rank them by priority (1 = top choice)</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="relative">
+                            <input type="checkbox" name="celebration_type_check" id="airbnb_check" value="airbnb" class="custom-checkbox hidden peer">
+                            <label for="airbnb_check" class="block p-4 border-3 border-blue-200 rounded-xl text-center cursor-pointer hover:bg-blue-100 transition transform hover:scale-105 hover:shadow-lg peer-checked:bg-blue-100 peer-checked:border-blue-500">
+                                <span class="text-3xl block mb-2 animate__animated animate__pulse animate__infinite animate__slow">🏖️</span>
+                                <span class="text-blue-700 font-semibold">AIRBNB-Lakeside</span>
+                            </label>
+                            <div class="hidden peer-checked:block absolute top-3 right-3">
+                                <select name="celebration_priority_airbnb" class="bg-white border border-blue-300 rounded-full w-10 h-10 text-center text-blue-700 font-bold">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" name="celebration_type_check" id="house_check" value="house" class="custom-checkbox hidden peer">
+                            <label for="house_check" class="block p-4 border-3 border-blue-200 rounded-xl text-center cursor-pointer hover:bg-blue-100 transition transform hover:scale-105 hover:shadow-lg peer-checked:bg-blue-100 peer-checked:border-blue-500">
+                                <span class="text-3xl block mb-2 animate__animated animate__pulse animate__infinite animate__slow">🏡</span>
+                                <span class="text-blue-700 font-semibold">House Party</span>
+                            </label>
+                            <div class="hidden peer-checked:block absolute top-3 right-3">
+                                <select name="celebration_priority_house" class="bg-white border border-blue-300 rounded-full w-10 h-10 text-center text-blue-700 font-bold">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" name="celebration_type_check" id="camping_check" value="camping" class="custom-checkbox hidden peer">
+                            <label for="camping_check" class="block p-4 border-3 border-blue-200 rounded-xl text-center cursor-pointer hover:bg-blue-100 transition transform hover:scale-105 hover:shadow-lg peer-checked:bg-blue-100 peer-checked:border-blue-500">
+                                <span class="text-3xl block mb-2 animate__animated animate__pulse animate__infinite animate__slow">⛺</span>
+                                <span class="text-blue-700 font-semibold">Camping and Trekking</span>
+                            </label>
+                            <div class="hidden peer-checked:block absolute top-3 right-3">
+                                <select name="celebration_priority_camping" class="bg-white border border-blue-300 rounded-full w-10 h-10 text-center text-blue-700 font-bold">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" name="celebration_type_check" id="virtual_check" value="virtual" class="custom-checkbox hidden peer">
+                            <label for="virtual_check" class="block p-4 border-3 border-blue-200 rounded-xl text-center cursor-pointer hover:bg-blue-100 transition transform hover:scale-105 hover:shadow-lg peer-checked:bg-blue-100 peer-checked:border-blue-500">
+                                <span class="text-3xl block mb-2 animate__animated animate__pulse animate__infinite animate__slow">💻</span>
+                                <span class="text-blue-700 font-semibold">Virtual Party</span>
+                            </label>
+                            <div class="hidden peer-checked:block absolute top-3 right-3">
+                                <select name="celebration_priority_virtual" class="bg-white border border-blue-300 rounded-full w-10 h-10 text-center text-blue-700 font-bold">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <span class="block text-lg font-medium text-blue-700 mb-3">Party Foods & Drinks 🍕🍹</span>
+                    <p class="text-sm text-blue-600 mb-4">Select all options you like!</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="italian" value="italian" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="italian" class="ml-2 text-sm text-gray-700 font-medium">🍝 Italian</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="mexican" value="mexican" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="mexican" class="ml-2 text-sm text-gray-700 font-medium">🌮 Mexican</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="asian" value="asian" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="asian" class="ml-2 text-sm text-gray-700 font-medium">🍜 Asian</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="bbq" value="bbq" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="bbq" class="ml-2 text-sm text-gray-700 font-medium">🍖 BBQ</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="vegetarian" value="vegetarian" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="vegetarian" class="ml-2 text-sm text-gray-700 font-medium">🥗 Vegetarian</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="desserts" value="desserts" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="desserts" class="ml-2 text-sm text-gray-700 font-medium">🍰 Just Desserts</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="pizza" value="pizza" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="pizza" class="ml-2 text-sm text-gray-700 font-medium">🍕 Pizza</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="finger_food" value="finger_food" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="finger_food" class="ml-2 text-sm text-gray-700 font-medium">🥪 Finger Foods</label>
+                        </div>
+                        <div class="flex items-center bg-white p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105 hover:shadow-md">
+                            <input type="checkbox" name="food_preferences" id="potluck" value="potluck" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded fancy-checkbox">
+                            <label for="potluck" class="ml-2 text-sm text-gray-700 font-medium">🍲 Potluck Style</label>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <input type="text" name="food_other" placeholder="Other food preferences?" class="w-full px-3 py-2 border border-blue-200 rounded-md text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="gift_ideas" class="block text-lg font-medium text-blue-700 mb-2">Gift wishlist? 🎁</label>
+                    <textarea name="gift_ideas" id="gift_ideas" rows="3" placeholder="Drop some hints..." class="form-control fancy-input w-full px-4 py-3 border border-blue-300 rounded-lg shadow-sm focus:outline-none"></textarea>
+                </div>
+            </div>
+
+
+
+            <!-- Activities -->
+            <div class="bg-purple-50 p-6 rounded-xl party-border party-section">
+                <h2 class="text-2xl font-semibold text-purple-600 mb-5 flex items-center section-title">
+                    <span class="cake-icon">🎯</span> Fun Activities
+                </h2>
+                
+                <div class="mb-6">
+                    <label class="block text-lg font-medium text-purple-700 mb-3">Rate these party activities! (1=Meh, 5=YES!)</label>
+                    
+                    <div class="space-y-5 mt-4">
+                        <div class="p-4 bg-white rounded-xl border-2 border-purple-200 shadow-md hover:shadow-lg transition transform hover:scale-102">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-purple-700 font-medium">🏞️ Outdoor Adventure</span>
+                                <span class="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-semibold" id="outdoor_value">3</span>
+                            </div>
+                            <input type="range" name="outdoor" id="outdoor" min="1" max="5" value="3" 
+                                  class="w-full h-3 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                                  oninput="document.getElementById('outdoor_value').textContent = this.value">
+                            <div class="mt-3">
+                                <input type="text" name="outdoor_suggestions" placeholder="Any specific outdoor activities?" class="w-full px-4 py-2 border-2 border-purple-200 rounded-lg text-sm fancy-input">
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-white rounded-xl border-2 border-purple-200 shadow-md hover:shadow-lg transition transform hover:scale-102">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-purple-700 font-medium">🎮 Game Night</span>
+                                <span class="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-semibold" id="games_value">3</span>
+                            </div>
+                            <input type="range" name="games" id="games" min="1" max="5" value="3" 
+                                  class="w-full h-3 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                                  oninput="document.getElementById('games_value').textContent = this.value">
+                            <div class="mt-3">
+                                <p class="text-sm text-gray-600 mb-2">Suggested games:</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="game_suggestions[]" value="cards_against_humanity" class="mr-1 h-3 w-3">
+                                        Cards Against Humanity
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="game_suggestions[]" value="jenga" class="mr-1 h-3 w-3">
+                                        Jenga
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="game_suggestions[]" value="pictionary" class="mr-1 h-3 w-3">
+                                        Pictionary
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="game_suggestions[]" value="uno" class="mr-1 h-3 w-3">
+                                        UNO
+                                    </label>
+                                </div>
+                                <input type="text" name="game_other" placeholder="Other game ideas?" class="w-full mt-2 px-4 py-2 border-2 border-purple-200 rounded-lg text-sm fancy-input">
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-white rounded-xl border-2 border-purple-200 shadow-md hover:shadow-lg transition transform hover:scale-102">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-purple-700 font-medium">🎬 Movie Night</span>
+                                <span class="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-semibold" id="movie_value">3</span>
+                            </div>
+                            <input type="range" name="movie" id="movie" min="1" max="5" value="3" 
+                                  class="w-full h-3 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                                  oninput="document.getElementById('movie_value').textContent = this.value">
+                            <div class="mt-3">
+                                <p class="text-sm text-gray-600 mb-2">Suggested movie genres:</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="movie_suggestions[]" value="comedy" class="mr-1 h-3 w-3">
+                                        Comedy
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="movie_suggestions[]" value="action" class="mr-1 h-3 w-3">
+                                        Action
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="movie_suggestions[]" value="horror" class="mr-1 h-3 w-3">
+                                        Horror
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="movie_suggestions[]" value="animated" class="mr-1 h-3 w-3">
+                                        Animated
+                                    </label>
+                                </div>
+                                <input type="text" name="movie_other" placeholder="Favorite movies or genres?" class="w-full mt-2 px-4 py-2 border-2 border-purple-200 rounded-lg text-sm fancy-input">
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-white rounded-xl border-2 border-purple-200 shadow-md hover:shadow-lg transition transform hover:scale-102">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-purple-700 font-medium">🍹 Drinks</span>
+                                <span class="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-semibold" id="drinks_value">3</span>
+                            </div>
+                            <input type="range" name="drinks" id="drinks" min="1" max="5" value="3" 
+                                  class="w-full h-3 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                                  oninput="document.getElementById('drinks_value').textContent = this.value">
+                            <div class="mt-3">
+                                <p class="text-sm text-gray-600 mb-2">Drink preferences:</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="drink_options[]" value="cocktails" class="mr-1 h-3 w-3">
+                                        Cocktails
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="drink_options[]" value="wine" class="mr-1 h-3 w-3">
+                                        Wine
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="drink_options[]" value="beer" class="mr-1 h-3 w-3">
+                                        Beer
+                                    </label>
+                                    <label class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 cursor-pointer">
+                                        <input type="checkbox" name="drink_options[]" value="nonalcoholic" class="mr-1 h-3 w-3">
+                                        Non-alcoholic
+                                    </label>
+                                </div>
+                                <input type="text" name="drink_other" placeholder="Favorite drinks?" class="w-full mt-2 px-4 py-2 border-2 border-purple-200 rounded-lg text-sm fancy-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="additional_ideas" class="block text-lg font-medium text-purple-700 mb-2">Any other fun ideas for the birthday? 💭</label>
+                    <textarea name="additional_ideas" id="additional_ideas" rows="3" placeholder="I've always wanted to try..." class="form-control fancy-input w-full px-4 py-3 border-2 border-purple-300 rounded-lg shadow-sm focus:outline-none"></textarea>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-center mt-8">
+                <button type="submit" class="gradient-button text-xl py-4 px-10 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 animate__animated animate__pulse animate__infinite animate__slow">
+                    🎉 Send My Party Picks! 🎉
+                </button>
+            </div>
+        </form>
+
+        <!-- Success message (hidden by default) -->
+        <div id="successMessage" class="hidden mt-8 p-8 bg-green-50 text-green-700 rounded-xl text-center party-border animate__animated">
+            <h3 class="text-2xl font-bold mb-3 birthday-heading">🎊 Thanks for your response! 🎊</h3>
+            <p class="text-lg mb-6">Your party preferences have been recorded.</p>
+            
+            <!-- QR Code section -->
+            <div class="mx-auto max-w-md p-6 bg-white rounded-xl shadow-lg">
+                <h4 class="text-xl font-semibold text-pink-600 mb-3">Your Birthday Invitation QR Code</h4>
+                <p class="text-gray-600 mb-4">Protect this for your entry!</p>
+                <div id="qrcode-container" class="flex justify-center mb-4"></div>
+                <a id="download-link" download="birthday-invitation-qr.png" class="inline-block bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold py-2 px-6 rounded-full">
+                    ⬇️ Download QR Code
+                </a>
+            </div>
+            
+            <div class="flex justify-center mt-5 space-x-4">
+                <span class="text-3xl animate__animated animate__bounce animate__infinite">🎁</span>
+                <span class="text-3xl animate__animated animate__swing animate__infinite">🎂</span>
+                <span class="text-3xl animate__animated animate__tada animate__infinite">🎉</span>
+                <span class="text-3xl animate__animated animate__bounce animate__infinite animate__delay-1s">🎈</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create fancy decorative elements
+        function createFancyElements() {
+            createBalloons();
+            createConfetti();
+            createSparkles();
+            createGiftBoxes();
+        }
+        
+        // Create floating balloons
+        function createBalloons() {
+            const colors = ['#ec4899', '#8b5cf6', '#3b82f6', '#f59e0b', '#10b981'];
+            const container = document.getElementById('balloons');
+            
+            for (let i = 0; i < 10; i++) {
+                const balloon = document.createElement('div');
+                balloon.className = 'balloon';
+                balloon.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                balloon.style.left = `${Math.random() * 90}%`;
+                balloon.style.top = `${Math.random() * 100}%`;
+                balloon.style.animationDuration = `${15 + Math.random() * 10}s`;
+                balloon.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(balloon);
+            }
+        }
+
+        // Create confetti effect
+        function createConfetti() {
+            const colors = ['#ec4899', '#8b5cf6', '#3b82f6', '#f59e0b', '#10b981', '#f472b6', '#a78bfa'];
+            const container = document.getElementById('confetti');
+            
+            for (let i = 0; i < 60; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = `${Math.random() * 100}%`;
+                confetti.style.top = `-10px`;
+                confetti.style.width = `${5 + Math.random() * 5}px`;
+                confetti.style.height = `${5 + Math.random() * 5}px`;
+                confetti.style.animationDuration = `${4 + Math.random() * 6}s`;
+                confetti.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(confetti);
+            }
+        }
+        
+        // Create sparkle effects
+        function createSparkles() {
+            const container = document.getElementById('sparkles');
+            
+            for (let i = 0; i < 30; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = `${Math.random() * 100}%`;
+                sparkle.style.top = `${Math.random() * 100}%`;
+                sparkle.style.transform = `scale(${0.5 + Math.random() * 0.5})`;
+                sparkle.style.opacity = `${0.3 + Math.random() * 0.7}`;
+                sparkle.style.animationDuration = `${2 + Math.random() * 3}s`;
+                sparkle.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(sparkle);
+            }
+        }
+        
+        // Create gift boxes decoration
+        function createGiftBoxes() {
+            const container = document.getElementById('gifts');
+            
+            for (let i = 0; i < 5; i++) {
+                const gift = document.createElement('div');
+                gift.className = 'gift-box';
+                gift.style.left = `${Math.random() * 90}%`;
+                gift.style.top = `${30 + Math.random() * 60}%`;
+                gift.style.transform = `rotate(${-15 + Math.random() * 30}deg) scale(${0.7 + Math.random() * 0.6})`;
+                
+                const giftTop = document.createElement('div');
+                giftTop.className = 'gift-top';
+                
+                const giftBody = document.createElement('div');
+                giftBody.className = 'gift-body';
+                
+                const giftRibbon = document.createElement('div');
+                giftRibbon.className = 'gift-ribbon';
+                
+                const giftRibbonH = document.createElement('div');
+                giftRibbonH.className = 'gift-ribbon-horizontal';
+                
+                gift.appendChild(giftTop);
+                gift.appendChild(giftBody);
+                gift.appendChild(giftRibbon);
+                gift.appendChild(giftRibbonH);
+                container.appendChild(gift);
+            }
+        }
+        
+        // Function to generate QR code with name
+        function generateQRCode(name) {
+            // Create QR code directly from QR Server API
+            const qrContainer = document.getElementById('qrcode-container');
+            qrContainer.innerHTML = ''; // Clear any existing content
+            
+            // Create QR Code with the person's name using QR Server API
+            const qrText = `https://docs.google.com/spreadsheets/d/1a-0TvZG8IDdjfqsBAUaMWM-bKtVltcAH9jyGyVSVO0Q/edit?gid=0#invitation=${encodeURIComponent(name)}`;
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=8b5cf6&bgcolor=ffffff&data=${encodeURIComponent(qrText)}`;
+            
+            // Create image element
+            const qrImg = document.createElement('img');
+            qrImg.src = qrApiUrl;
+            qrImg.alt = `Birthday Invitation QR Code for ${name}`;
+            qrImg.className = 'mx-auto border-4 border-purple-200 rounded-lg';
+            qrContainer.appendChild(qrImg);
+            
+            // Set download link
+            const downloadLink = document.getElementById("download-link");
+            downloadLink.href = qrApiUrl;
+            downloadLink.download = `birthday-invitation-${name.replace(/\s+/g, '-')}.png`;
+        }
+        
+        // Make radio button labels work with the custom styling
+        function setupCustomInputs() {
+            // For party types, handle checkboxes with priority selection
+            const partyCheckboxes = document.querySelectorAll('input[name="celebration_type_check"]');
+            partyCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const label = document.querySelector(`label[for="${checkbox.id}"]`);
+                    if (checkbox.checked) {
+                        label.classList.add('bg-blue-100');
+                        label.classList.add('border-blue-500');
+                    } else {
+                        label.classList.remove('bg-blue-100');
+                        label.classList.remove('border-blue-500');
+                    }
+                });
+            });
+        }
+        
+        // Submit form data to Google Sheets
+        function submitToGoogleSheet(e) {
+            e.preventDefault();
+            
+            // Get form elements
+            const form = document.getElementById('birthdaySurvey');
+            
+            // Collect form data
+            const formData = new FormData(form);
+            const formObject = {};
+            
+            formData.forEach((value, key) => {
+                // Handle checkbox arrays (multiple selections)
+                if (key.endsWith('[]')) {
+                    const baseKey = key.slice(0, -2);
+                    if (!formObject[baseKey]) {
+                        formObject[baseKey] = [];
+                    }
+                    formObject[baseKey].push(value);
+                } else {
+                    formObject[key] = value;
+                }
+            });
+            
+            // Process checkbox arrays into strings
+            for (const key in formObject) {
+                if (Array.isArray(formObject[key])) {
+                    formObject[key] = formObject[key].join(', ');
+                }
+            }
+            
+            // Process party preferences with priorities
+            const partyPreferences = [];
+            const checkboxes = document.querySelectorAll('input[name="celebration_type_check"]:checked');
+            
+            checkboxes.forEach(checkbox => {
+                const type = checkbox.value;
+                const priority = document.querySelector(`select[name="celebration_priority_${type}"]`).value;
+                partyPreferences.push(`${type} (priority: ${priority})`);
+            });
+            
+            formObject.party_preferences = partyPreferences.join('; ');
+            
+            // URL for the Google Sheets script
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbzjdOE0hxjRZ1uvrekqLE46OVPOCOA_uV_R145fddtaTRKHgeY_2wQe0eiDnG-bUt8Dxw/exec';
+            
+            // Convert form data to URL parameters
+            const urlParams = new URLSearchParams();
+            for (const key in formObject) {
+                urlParams.append(key, formObject[key]);
+            }
+            
+            // Add timestamp
+            urlParams.append('timestamp', new Date().toISOString());
+            
+            // Send data to Google Sheets
+            fetch(`${scriptURL}?${urlParams.toString()}`, {
+                method: 'GET',
+                mode: 'no-cors'
+            })
+            .then(response => {
+                console.log('Success!', response);
+                form.style.display = 'none';
+                const successMessage = document.getElementById('successMessage');
+                successMessage.style.display = 'block';
+                successMessage.classList.add('animate__bounceIn');
+                
+                // Generate QR code with the person's name
+                const name = formObject.name || 'Guest';
+                generateQRCode(name);
+            })
+            .catch(error => {
+                console.error('Error!', error.message);
+                alert('There was a problem submitting your form. Please try again.');
+            });
+        }
+        
+        // Initialize everything
+        window.onload = function() {
+            createFancyElements();
+            setupCustomInputs();
+        };
+    </script>
+</body>
+</html>
