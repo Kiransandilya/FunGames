@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Arcade — Less Than 100KB</title>
+<style>
+  :root { --green:#00ff66; --green-dim:#0a8a3a; --green-faint:#075028; --amber:#ffd43b; --bg:#000; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--green); font-family:'Courier New',Courier,monospace; overflow-x:hidden; }
+  body::before { content:""; position:fixed; inset:0; background:repeating-linear-gradient(0deg,rgba(0,0,0,.18),rgba(0,0,0,.18) 1px,transparent 1px,transparent 2px); pointer-events:none; z-index:5; }
+
+  .hall { max-width:920px; margin:0 auto; padding:22px 20px 40px; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; gap:14px; border-bottom:1px solid var(--green-faint); padding-bottom:14px; flex-wrap:wrap; }
+  .home-link { color:var(--green-dim); text-decoration:none; font-size:.8rem; letter-spacing:2px; border:1px solid var(--green-faint); padding:7px 13px; border-radius:4px; }
+  .home-link:hover { color:var(--green); border-color:var(--green); }
+  .hall-title { font-size:clamp(1.3rem,5vw,2rem); font-weight:bold; letter-spacing:6px; text-shadow:0 0 8px var(--green); margin:0; }
+  .credit-meter { display:flex; align-items:center; gap:10px; }
+  .credit-meter .lbl { font-size:.72rem; letter-spacing:2px; color:var(--amber); }
+  .coins { display:flex; gap:8px; }
+  .disc { width:18px; height:18px; border-radius:50%; border:2px solid var(--green-faint); background:transparent; transition:.25s; }
+  .disc.lit { background:radial-gradient(circle at 35% 30%,#fff3b0,var(--amber) 55%,#b8860b); border-color:var(--amber); box-shadow:0 0 8px rgba(255,212,59,.6); }
+  .credit-meter.shake { animation:shake .4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+
+  .eyebrow { margin:34px 0 14px; font-size:.78rem; letter-spacing:3px; color:var(--green-dim); text-transform:uppercase; border-bottom:1px solid var(--green-faint); padding-bottom:6px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+  .game { text-align:left; background:rgba(0,40,16,.55); border:2px solid var(--green); border-radius:6px; padding:20px; cursor:pointer; transition:transform .2s,box-shadow .2s,background .2s; position:relative; }
+  .game:hover,.game:focus-visible { transform:translateY(-4px); box-shadow:0 10px 26px rgba(0,255,102,.28); background:rgba(0,60,24,.7); outline:none; }
+  .game:focus-visible { border-color:var(--amber); }
+  .game h3 { margin:0 0 6px; font-size:1.4rem; color:var(--green); text-shadow:0 0 6px var(--green); }
+  .game p { margin:8px 0 14px; color:#9dffc1; font-size:.9rem; line-height:1.5; }
+  .game .row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .badge { font-weight:bold; color:var(--bg); background:var(--amber); padding:3px 9px; border-radius:3px; font-size:.8rem; box-shadow:0 0 10px rgba(255,212,59,.4); }
+  .play { display:inline-block; border:2px solid var(--green); padding:6px 16px; font-weight:bold; letter-spacing:2px; text-transform:uppercase; font-size:.82rem; }
+  .game:hover .play { background:var(--green); color:var(--bg); }
+  .game.locked { opacity:.6; }
+  .game.locked .play { border-color:var(--green-faint); color:var(--green-dim); }
+  .game .tag { position:absolute; top:12px; right:12px; font-size:.62rem; letter-spacing:1px; color:var(--amber); border:1px solid var(--amber); border-radius:3px; padding:2px 6px; }
+
+  .soon { border:1px dashed var(--green-faint); border-radius:5px; padding:16px; color:var(--green-dim); background:rgba(0,20,8,.4); }
+  .soon h4 { margin:0 0 6px; font-size:1.05rem; color:#5fcf8a; }
+  .soon span { font-size:.7rem; letter-spacing:2px; text-transform:uppercase; opacity:.8; }
+  .hall-foot { margin-top:36px; font-size:.8rem; color:var(--green-dim); text-align:center; }
+
+  /* ---- CRT stage ---- */
+  .crt-stage { position:fixed; inset:0; display:none; z-index:1500; }
+  .room { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%,#1c1c22,#000 75%); transform-origin:0 0; }
+  .monitor { width:min(560px,88vw); }
+  .bezel { position:relative; background:linear-gradient(160deg,#e0d4b6,#c2b288 60%,#a89773); border-radius:20px; padding:26px 26px 56px; box-shadow:0 30px 60px rgba(0,0,0,.6),inset 0 2px 4px rgba(255,255,255,.4),inset 0 -3px 8px rgba(0,0,0,.3); }
+  .screen { position:relative; aspect-ratio:4/3; background:#02160c; border-radius:12px; overflow:hidden; box-shadow:inset 0 0 50px rgba(0,0,0,.9),inset 0 0 14px rgba(0,0,0,.8),0 0 0 3px #2a2418; }
+  .screen iframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#000; }
+  .glass { position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg,rgba(0,0,0,.10),rgba(0,0,0,.10) 1px,transparent 1px,transparent 3px),radial-gradient(circle at 50% 50%,transparent 60%,rgba(0,0,0,.35)); z-index:2; }
+  .screen-flash { position:absolute; inset:0; background:#eafff0; opacity:0; pointer-events:none; z-index:3; }
+  .crt-stage.on .screen-flash { animation:sflash .55s ease forwards; }
+  @keyframes sflash { 0%{opacity:0;} 25%{opacity:.95;} 100%{opacity:0;} }
+  .led { position:absolute; right:24px; bottom:20px; width:9px; height:9px; border-radius:50%; background:#0a3; box-shadow:0 0 8px #0f6; }
+  .crt-stage.on .led { background:#3f6; box-shadow:0 0 12px #6f9; }
+  .brand { position:absolute; left:24px; bottom:16px; font-size:.8rem; letter-spacing:3px; color:#6b5d3a; font-weight:bold; text-shadow:0 1px 0 rgba(255,255,255,.4); }
+  .stand { width:120px; height:30px; margin:0 auto; background:linear-gradient(#9a8a66,#6f6044); border-radius:0 0 14px 14px; box-shadow:0 14px 20px rgba(0,0,0,.5); }
+  .stand-neck { width:60px; height:18px; margin:0 auto; background:#7d6e4d; }
+
+  .exit-float { position:fixed; top:14px; right:14px; display:none; z-index:1600; background:rgba(0,0,0,.6); color:var(--amber); border:2px solid var(--amber); border-radius:30px; padding:9px 18px; font-family:inherit; font-weight:bold; letter-spacing:2px; font-size:.82rem; cursor:pointer; box-shadow:0 0 16px rgba(255,212,59,.4); }
+  .exit-float:hover { background:var(--amber); color:#000; }
+  .crt-stage.zoom .exit-float { display:block; }
+
+  /* out of credits modal */
+  .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.85); z-index:1700; padding:20px; }
+  .modal.show { display:flex; }
+  .modal-card { background:linear-gradient(160deg,#0b2a16,#04140a); border:2px solid var(--amber); border-radius:14px; padding:34px 30px; max-width:420px; text-align:center; box-shadow:0 0 50px rgba(255,212,59,.3); }
+  .modal-card h2 { margin:0 0 12px; color:var(--amber); letter-spacing:3px; text-shadow:0 0 10px rgba(255,212,59,.5); }
+  .modal-card p { color:#cfe; line-height:1.6; margin:0 0 22px; }
+  .modal-card .home-btn { display:inline-block; background:var(--amber); color:#000; text-decoration:none; font-weight:bold; letter-spacing:2px; padding:12px 26px; border-radius:30px; }
+  .modal-card .browse { display:block; margin-top:14px; color:var(--green-dim); font-size:.78rem; cursor:pointer; }
+
+  .toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); background:rgba(0,0,0,.8); border:1px solid var(--green); color:var(--green); padding:10px 20px; border-radius:30px; font-size:.82rem; letter-spacing:1px; opacity:0; transition:.3s; z-index:1650; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce){ .credit-meter.shake,.screen-flash{animation:none;} }
+</style>
+</head>
+<body>
+
+<div class="hall" id="hall">
+  <div class="topbar">
+    <a class="home-link" href="index.html">&#9664; HOME</a>
+    <h1 class="hall-title">ARCADE</h1>
+    <div class="credit-meter" id="meter">
+      <span class="lbl">CREDITS</span>
+      <span class="coins"><span class="disc"></span><span class="disc"></span><span class="disc"></span></span>
+    </div>
+  </div>
+
+  <div class="eyebrow">&#9654; Pick a machine — one credit per play</div>
+  <div class="grid">
+    <div class="game" id="firepath" role="button" tabindex="0" aria-label="Play Fire Path, costs one credit">
+      <h3>Fire Path</h3>
+      <p>Memorize the burning path before the lights go out, then trace it in the dark. Stray once and your flame dies.</p>
+      <div class="row"><span class="play">&#9654; Play (1 credit)</span><span class="badge">62 KB</span></div>
+    </div>
+  </div>
+
+  <div class="eyebrow">&#9711; On the workbench — not built yet</div>
+  <div class="grid">
+    <div class="soon"><h4>Snake</h4><span>planned</span></div>
+    <div class="soon"><h4>Pong</h4><span>planned</span></div>
+    <div class="soon"><h4>Falling Blocks</h4><span>planned</span></div>
+  </div>
+
+  <p class="hall-foot">Out of credits? Walk back to the <a href="index.html" style="color:var(--amber)">coin slot</a> and feed the machine.</p>
+</div>
+
+<!-- CRT stage -->
+<div class="crt-stage" id="stage" aria-hidden="true">
+  <div class="room" id="room">
+    <div class="monitor">
+      <div class="bezel">
+        <div class="screen">
+          <iframe id="frame" title="game screen"></iframe>
+          <div class="glass"></div>
+          <div class="screen-flash"></div>
+        </div>
+        <div class="brand">FUN-TRON 100</div>
+        <div class="led"></div>
+      </div>
+      <div class="stand-neck"></div>
+      <div class="stand"></div>
+    </div>
+  </div>
+  <button class="exit-float" id="exitBtn">&#9211; EXIT</button>
+</div>
+
+<!-- out of credits -->
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <h2>OUT OF CREDITS</h2>
+    <p>The machine's gone quiet. Head back to the home screen and insert more coins to keep playing — three credits max.</p>
+    <a class="home-btn" href="index.html">&#9664; BACK TO COIN SLOT</a>
+    <span class="browse" id="browse">or browse the hall</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  (function () {
+    var p=new URLSearchParams(location.search);
+    var credits=parseInt(p.get('credits'),10); if(isNaN(credits)) credits=0; credits=Math.max(0,Math.min(3,credits));
+    var busy=false, audioCtx=null;
+    var discs=[].slice.call(document.querySelectorAll('#meter .disc'));
+    var meter=document.getElementById('meter');
+    var stage=document.getElementById('stage'), room=document.getElementById('room'), frame=document.getElementById('frame');
+    var screen=document.querySelector('.screen'), exitBtn=document.getElementById('exitBtn');
+    var modal=document.getElementById('modal'), browse=document.getElementById('browse'), toast=document.getElementById('toast');
+    var firepath=document.getElementById('firepath');
+
+    function reduced(){ return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    function ensureAudio(){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }catch(e){} }
+    function beep(f,t,d,ty){ try{ var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type=ty||'square'; o.frequency.value=f; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.22,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.start(t); o.stop(t+d+.02); }catch(e){} }
+    function spendSound(){ if(!audioCtx)return; var t=audioCtx.currentTime; beep(660,t,.08); beep(880,t+.07,.1); }
+    function denySound(){ if(!audioCtx)return; var t=audioCtx.currentTime; beep(200,t,.16,'sawtooth'); }
+    function powerSound(){ if(!audioCtx)return; var t=audioCtx.currentTime; beep(140,t,.18,'triangle'); beep(420,t+.12,.14,'triangle'); }
+
+    function render(){ for(var i=0;i<discs.length;i++) discs[i].classList.toggle('lit', i<credits); updateLockState(); }
+    function syncUrl(){ var q=new URLSearchParams(location.search); q.set('credits',credits); history.replaceState(null,'','?'+q.toString()); }
+    function updateLockState(){ if(credits<=0){ firepath.classList.add('locked'); if(!firepath.querySelector('.tag')){ var t=document.createElement('span'); t.className='tag'; t.textContent='INSERT COIN'; firepath.appendChild(t);} } else { firepath.classList.remove('locked'); var ex=firepath.querySelector('.tag'); if(ex) ex.remove(); } }
+
+    function toastMsg(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ toast.classList.remove('show'); },1900); }
+    function showModal(){ modal.classList.add('show'); }
+    function noCredit(){ ensureAudio(); denySound(); meter.classList.add('shake'); setTimeout(function(){meter.classList.remove('shake');},400); showModal(); }
+
+    function launch(file){
+      ensureAudio();
+      if(credits<=0){ noCredit(); return; }
+      if(busy) return;
+      credits--; syncUrl(); render(); spendSound();
+      openCRT(file);
+    }
+
+    function openCRT(file){
+      busy=true;
+      frame.src=file;
+      stage.style.display='block'; stage.setAttribute('aria-hidden','false');
+      requestAnimationFrame(function(){ stage.classList.add('on'); powerSound(); });
+      var r=reduced();
+      setTimeout(function(){ zoomIn(r); }, r?0:650);
+    }
+    function zoomIn(r){
+      var rect=screen.getBoundingClientRect(), vw=window.innerWidth, vh=window.innerHeight;
+      var s=Math.max(vw/rect.width, vh/rect.height)*1.02;
+      var tx=(vw - s*rect.width)/2 - s*rect.left;
+      var ty=(vh - s*rect.height)/2 - s*rect.top;
+      room.style.transition = r ? 'none' : 'transform 1.15s cubic-bezier(.7,.02,.27,1)';
+      void room.offsetWidth;
+      room.style.transform='translate('+tx+'px,'+ty+'px) scale('+s+')';
+      stage.classList.add('zoom');
+      busy=false;
+    }
+    function exit(){
+      if(busy) return; busy=true;
+      var r=reduced();
+      room.style.transition = r ? 'none' : 'transform 1s cubic-bezier(.7,.02,.27,1)';
+      room.style.transform='';
+      stage.classList.remove('zoom');
+      var done=function(){ stage.classList.remove('on'); stage.style.display='none'; stage.setAttribute('aria-hidden','true'); frame.src='about:blank'; busy=false; afterExit(); };
+      if(r){ done(); } else { setTimeout(done,1000); }
+    }
+    function afterExit(){ if(credits<=0){ showModal(); } else { toastMsg(credits+' credit'+(credits===1?'':'s')+' left'); } }
+
+    firepath.addEventListener('click', function(){ launch('memorymaster.html'); });
+    firepath.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '||e.code==='Space'){ e.preventDefault(); launch('memorymaster.html'); } });
+    exitBtn.addEventListener('click', exit);
+    browse.addEventListener('click', function(){ modal.classList.remove('show'); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape' && stage.classList.contains('zoom')) exit(); });
+    window.addEventListener('resize', function(){ if(stage.classList.contains('zoom')){ var rr=reduced(); var prev=room.style.transition; room.style.transition='none'; zoomIn(true); room.style.transition=prev; } });
+
+    render();
+    if(credits<=0){ /* arrived empty: let them browse, locked */ }
+  })();
+</script>
+</body>
+</html>
