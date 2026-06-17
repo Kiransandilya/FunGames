@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiger Trap — Bagh-Chal</title>
+<style>
+  :root{ --green:#00ff66; --green-dim:#0a8a3a; --green-faint:#075028; --amber:#ffd43b; --tiger:#ff7a1a; --danger:#ff4d4d; --bg:#000; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{ background:radial-gradient(circle at 50% 35%,#04140a,#000 78%); color:var(--green); font-family:'Courier New',Courier,monospace;
+        display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:9px; padding:12px; min-height:100vh; overflow-x:hidden; overflow-y:auto; }
+  body::before{ content:""; position:fixed; inset:0; background:repeating-linear-gradient(0deg,rgba(0,0,0,.18),rgba(0,0,0,.18) 1px,transparent 1px,transparent 2px); pointer-events:none; z-index:9; }
+
+  h1{ margin:0; font-size:clamp(1.2rem,4.4vw,1.9rem); letter-spacing:7px; text-shadow:0 0 10px var(--tiger); color:#ffd9b0; }
+  .sub{ margin:0; font-size:.7rem; letter-spacing:2px; color:var(--green-dim); text-transform:uppercase; }
+  .status{ min-height:1.2em; font-size:.92rem; letter-spacing:1px; color:#bfffd8; text-align:center; }
+  .status b{ color:var(--amber); }
+  .scoreline{ display:flex; gap:18px; font-size:.78rem; letter-spacing:1px; color:var(--green-dim); }
+  .scoreline span b{ color:var(--green); }
+  .scoreline .eaten b{ color:var(--tiger); }
+
+  .boardwrap{ position:relative; }
+  canvas{ display:block; touch-action:manipulation; background:#02160c; border:2px solid var(--green-faint); border-radius:8px; box-shadow:inset 0 0 40px rgba(0,0,0,.8),0 0 22px rgba(0,255,102,.12); }
+
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  button{ font-family:inherit; font-size:.78rem; letter-spacing:2px; text-transform:uppercase; color:var(--green); background:rgba(0,40,16,.5);
+          border:2px solid var(--green); border-radius:30px; padding:8px 16px; cursor:pointer; transition:.18s; }
+  button:hover{ background:var(--green); color:#000; }
+  button.ghost{ border-color:var(--green-faint); color:var(--green-dim); }
+  button.ghost:hover{ background:var(--green-faint); color:#001; }
+
+  /* pop-up modal: How to Play */
+  .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.86); z-index:30; padding:18px; }
+  .modal.show{ display:flex; }
+  .modal-card{ position:relative; width:100%; max-width:460px; max-height:86vh; overflow-y:auto; text-align:left;
+               border:2px solid var(--green); border-radius:14px; padding:26px 24px 22px; background:linear-gradient(160deg,#0b2a16,#04140a);
+               box-shadow:0 0 50px rgba(0,255,102,.2); }
+  .modal-card h2{ margin:0 0 12px; font-size:1rem; letter-spacing:2px; color:var(--amber); }
+  .modal-card p{ margin:0 0 10px; font-size:.85rem; line-height:1.6; color:#9dffc1; }
+  .modal-card .origin{ color:var(--green-dim); font-style:italic; border-top:1px dashed var(--green-faint); padding-top:10px; margin-top:10px; }
+  .modal-card .x{ position:absolute; top:6px; right:8px; border:none; background:none; color:var(--green-dim); font-size:1.5rem; line-height:1; padding:4px 9px; border-radius:50%; cursor:pointer; }
+  .modal-card .x:hover{ color:var(--green); background:rgba(0,255,102,.12); }
+  .modal-card .gotit{ margin-top:6px; }
+
+  /* win/lose banner */
+  .over{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.86); z-index:20; padding:20px; }
+  .over.show{ display:flex; }
+  .over .card{ text-align:center; border:2px solid var(--amber); border-radius:14px; padding:30px 34px; background:linear-gradient(160deg,#0b2a16,#04140a);
+               box-shadow:0 0 50px rgba(255,212,59,.25); max-width:380px; }
+  .over h2{ margin:0 0 10px; letter-spacing:4px; }
+  .over.win h2{ color:var(--green); text-shadow:0 0 14px var(--green); }
+  .over.lose h2{ color:var(--tiger); text-shadow:0 0 14px var(--tiger); }
+  .over p{ color:#cfe; line-height:1.6; margin:0 0 20px; font-size:.9rem; }
+
+  @media (prefers-reduced-motion: reduce){ canvas{ box-shadow:inset 0 0 40px rgba(0,0,0,.8); } }
+</style>
+</head>
+<body>
+  <h1>TIGER TRAP</h1>
+  <p class="sub">Bagh-Chal &middot; you herd the goats</p>
+  <div class="scoreline">
+    <span class="placed">To drop: <b id="toDrop">20</b></span>
+    <span class="onboard">On board: <b id="onBoard">0</b></span>
+    <span class="eaten">Eaten: <b id="eaten">0</b>/5</span>
+  </div>
+  <div class="status" id="status">Place a goat on any point.</div>
+
+  <div class="boardwrap"><canvas id="board" width="520" height="520"></canvas></div>
+
+  <div class="controls">
+    <button id="newBtn">&#8635; New Game</button>
+    <button id="rulesBtn" class="ghost">? How to Play</button>
+  </div>
+
+  <div class="modal" id="rules">
+    <div class="modal-card">
+      <button class="x" id="rulesClose" aria-label="Close">&times;</button>
+      <h2>HOW TO PLAY</h2>
+      <p><b>You are the goats.</b> Four tigers (orange) start in the corners and move every turn. You drop <b>20 goats</b>, one per turn, onto any empty point.</p>
+      <p>A tiger captures by <b>leaping</b> over a goat on a line into the empty point beyond — just like checkers. If the tigers eat <b>5 goats, you lose</b>.</p>
+      <p>Once all 20 goats are down, you slide them one point along the lines. <b>You win</b> by surrounding the tigers so not one of them can move.</p>
+      <p>Goats in danger of being eaten <b>flash red</b>. Wall the tigers in — your only weapon is your numbers.</p>
+      <p class="origin">Bagh-Chal ("moving tigers") is a centuries-old game of the Nepali hills, scratched into stone or wood and played with pebbles and seeds — the herder's daily fear of the tiger made into a game of nerve.</p>
+      <button id="rulesGot" class="gotit">Got it</button>
+    </div>
+  </div>
+
+  <div class="over" id="over"><div class="card"><h2 id="overTitle"></h2><p id="overMsg"></p><button id="overBtn">&#8635; Play Again</button></div></div>
+
+<script>
+(function(){
+  "use strict";
+  // ---------- board model: 5x5 Alquerque graph ----------
+  var N=5, PTS=25;
+  function rc(i){ return [Math.floor(i/N), i%N]; }
+  function idx(r,c){ return r*N+c; }
+  function inb(r,c){ return r>=0&&r<N&&c>=0&&c<N; }
+  function evenPoint(i){ var p=rc(i); return ((p[0]+p[1])%2)===0; } // diagonals exist only here
+  var ORTH=[[-1,0],[1,0],[0,-1],[0,1]], DIAG=[[-1,-1],[-1,1],[1,-1],[1,1]];
+  // adjacency + edge list
+  var NB=[], EDGES=[];
+  (function(){
+    for(var i=0;i<PTS;i++){ NB[i]=[]; var p=rc(i), dirs=ORTH.concat(evenPoint(i)?DIAG:[]);
+      for(var d=0;d<dirs.length;d++){ var nr=p[0]+dirs[d][0], nc=p[1]+dirs[d][1]; if(inb(nr,nc)) NB[i].push(idx(nr,nc)); } }
+    for(var a=0;a<PTS;a++) for(var k=0;k<NB[a].length;k++){ var b=NB[a][k]; if(b>a) EDGES.push([a,b]); }
+  })();
+  function isNeighbor(a,b){ return NB[a].indexOf(b)>=0; }
+
+  // ---------- game state ----------
+  // occ: 0 empty, 1 goat, 2 tiger
+  var occ, tigers, toDrop, eaten, phase, turn, selected, gameOver, locked, anim, flash;
+  var EAT_TO_WIN=5, GOATS_TOTAL=20;
+
+  function newGame(){
+    occ=new Array(PTS).fill(0);
+    tigers=[0,4,20,24]; tigers.forEach(function(t){ occ[t]=2; });
+    toDrop=GOATS_TOTAL; eaten=0; phase='place'; turn='goat'; selected=-1;
+    gameOver=false; locked=false; anim=null; flash=null;
+    hideOver(); updateHud(); setStatus('Place a goat on any point.');
+  }
+
+  // ---------- move generation ----------
+  function tigerMovesFrom(t){
+    var out=[], p=rc(t), dirs=ORTH.concat(evenPoint(t)?DIAG:[]);
+    // simple slides
+    for(var k=0;k<NB[t].length;k++){ var b=NB[t][k]; if(occ[b]===0) out.push({from:t,to:b,cap:false,mid:-1}); }
+    // jumps over a goat to empty landing along a straight line
+    for(var d=0;d<dirs.length;d++){
+      var mr=p[0]+dirs[d][0], mc=p[1]+dirs[d][1], lr=p[0]+2*dirs[d][0], lc=p[1]+2*dirs[d][1];
+      if(!inb(mr,mc)||!inb(lr,lc)) continue;
+      var m=idx(mr,mc), l=idx(lr,lc);
+      if(isNeighbor(t,m) && isNeighbor(m,l) && occ[m]===1 && occ[l]===0) out.push({from:t,to:l,cap:true,mid:m});
+    }
+    return out;
+  }
+  function allTigerMoves(){ var all=[]; for(var i=0;i<tigers.length;i++) all=all.concat(tigerMovesFrom(tigers[i])); return all; }
+  function tigerMobility(){ var m=0; for(var i=0;i<tigers.length;i++) m+=tigerMovesFrom(tigers[i]).length; return m; }
+  function tigersTrapped(){ var c=0; for(var i=0;i<tigers.length;i++){ if(tigerMovesFrom(tigers[i]).length===0) c++; } return c; }
+  function tigerHasMove(){ for(var i=0;i<tigers.length;i++){ if(tigerMovesFrom(tigers[i]).length) return true; } return false; }
+  function goatHasMove(){ for(var i=0;i<PTS;i++){ if(occ[i]===1){ for(var k=0;k<NB[i].length;k++) if(occ[NB[i][k]]===0) return true; } } return false; }
+  function goatDests(g){ var out=[]; for(var k=0;k<NB[g].length;k++){ var b=NB[g][k]; if(occ[b]===0) out.push(b); } return out; }
+  // goats a tiger can capture right now (for the danger highlight)
+  function capturableGoats(){
+    var set={};
+    for(var i=0;i<tigers.length;i++){ var mv=tigerMovesFrom(tigers[i]); for(var j=0;j<mv.length;j++){ if(mv[j].cap) set[mv[j].mid]=1; } }
+    return set;
+  }
+
+  // ---------- tiger AI (1-ply heuristic, capture-biased, trap-averse) ----------
+  function chooseTigerMove(){
+    var moves=allTigerMoves(); if(!moves.length) return null;
+    var best=null, bestScore=-Infinity;
+    for(var i=0;i<moves.length;i++){
+      var mv=moves[i];
+      // apply
+      occ[mv.from]=0; occ[mv.to]=2; var ti=tigers.indexOf(mv.from); tigers[ti]=mv.to;
+      var goatGone=-1; if(mv.cap){ goatGone=mv.mid; occ[mv.mid]=0; }
+      var capNow=eaten+(mv.cap?1:0);
+      var score=0;
+      if(capNow>=EAT_TO_WIN) score+=100000;            // winning capture
+      if(mv.cap) score+=1000;                           // captures are strong
+      score+=6*tigerMobility();                         // stay mobile
+      score-=70*tigersTrapped();                        // never get walled in
+      score+=45*Object.keys(capturableGoats()).length;  // set up the next kill / forks
+      // revert
+      tigers[ti]=mv.from; occ[mv.to]=0; occ[mv.from]=2; if(goatGone>=0) occ[goatGone]=1;
+      score+=Math.random()*2.0;                         // break ties, add life
+      if(score>bestScore){ bestScore=score; best=mv; }
+    }
+    return best;
+  }
+
+  // ---------- applying moves ----------
+  function afterGoatMove(){
+    updateHud();
+    if(!tigerHasMove()){ endGame('goat'); return; }     // goats trapped every tiger
+    turn='tiger'; locked=true; setStatus('The tigers prowl…');
+    setTimeout(tigerTurn, 360);
+  }
+  function tigerTurn(){
+    var mv=chooseTigerMove();
+    if(!mv){ endGame('goat'); return; }
+    // update model immediately; defer the captured goat + count to the leap's end
+    occ[mv.from]=0; occ[mv.to]=2; tigers[tigers.indexOf(mv.from)]=mv.to;
+    if(mv.cap){ sfxGrowl(); } else { sfxStep(); }
+    startAnim(mv.from, mv.to, function(){
+      if(mv.cap){ occ[mv.mid]=0; eaten++; flash={i:mv.mid,t:now()}; sfxChomp(); }
+      updateHud();
+      if(eaten>=EAT_TO_WIN){ endGame('tiger'); return; }
+      if(!tigerHasMove()){ endGame('goat'); return; }
+      if(phase==='move' && !goatHasMove()){ endGame('tiger'); return; } // goats stalemated
+      turn='goat'; locked=false;
+      setStatus(phase==='place' ? boldDrop() : 'Your move — slide a goat.');
+    });
+  }
+
+  function placeGoat(i){
+    occ[i]=1; toDrop--;
+    if(toDrop===0) phase='move';
+    sfxPlace(); flash=null; afterGoatMove();
+  }
+  function moveGoat(from,to){
+    occ[from]=0; occ[to]=1; selected=-1; sfxPlace();
+    startAnim(from,to, afterGoatMove);
+  }
+
+  // ---------- input ----------
+  var canvas=document.getElementById('board'), ctx=canvas.getContext('2d');
+  var geo={ size:520, m:46, sp:107, r:18 };
+
+  function pointAt(i){ var p=rc(i); return { x:geo.m+p[1]*geo.sp, y:geo.m+p[0]*geo.sp }; }
+  function hitPoint(x,y){
+    var best=-1, bd=geo.sp*0.46;
+    for(var i=0;i<PTS;i++){ var q=pointAt(i), d=Math.hypot(x-q.x,y-q.y); if(d<bd){ bd=d; best=i; } }
+    return best;
+  }
+  canvas.addEventListener('click', function(e){
+    if(gameOver||locked||turn!=='goat') return;
+    var rect=canvas.getBoundingClientRect();
+    var x=(e.clientX-rect.left)*(geo.size/rect.width), y=(e.clientY-rect.top)*(geo.size/rect.height);
+    var i=hitPoint(x,y); if(i<0) return;
+    ensureAudio();
+    if(phase==='place'){ if(occ[i]===0) placeGoat(i); else sfxDeny(); return; }
+    // movement phase
+    if(occ[i]===1){ selected=(selected===i)?-1:i; return; }
+    if(selected>=0 && occ[i]===0 && goatDests(selected).indexOf(i)>=0){ moveGoat(selected,i); return; }
+    if(occ[i]===0) sfxDeny();
+  });
+
+  // ---------- animation + render ----------
+  function now(){ return (window.performance&&performance.now)?performance.now():Date.now(); }
+  function reduced(){ return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  function startAnim(from,to,cb){
+    if(reduced()){ cb(); return; }
+    anim={ from:from, to:to, t0:now(), dur:240, cb:cb, target:to };
+  }
+  function easeInOut(t){ return t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+
+  function reservedH(){ // height taken by everything except the board, so the board fits without clipping
+    var els=[document.querySelector('h1'),document.querySelector('.sub'),document.querySelector('.scoreline'),document.getElementById('status'),document.querySelector('.controls')];
+    var h=0; for(var i=0;i<els.length;i++){ if(els[i]) h+=els[i].offsetHeight; }
+    return h + 9*5 /*flex gaps*/ + 24 /*body padding*/ + 16 /*safety*/;
+  }
+  function resize(){
+    var dpr=window.devicePixelRatio||1;
+    var avail=Math.min(window.innerWidth*0.92, window.innerHeight-reservedH(), 560);
+    var size=Math.max(240, Math.floor(avail));
+    geo.size=size; geo.m=Math.round(size*0.09); geo.sp=(size-2*geo.m)/(N-1); geo.r=Math.max(11, size*0.035);
+    canvas.style.width=size+'px'; canvas.style.height=size+'px';
+    canvas.width=Math.round(size*dpr); canvas.height=Math.round(size*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+
+  function drawTiger(x,y,r){
+    ctx.save();
+    var g=ctx.createRadialGradient(x-r*0.3,y-r*0.35,r*0.2,x,y,r);
+    g.addColorStop(0,'#ffd9a0'); g.addColorStop(.5,'#ff8a2b'); g.addColorStop(1,'#c4470a');
+    ctx.shadowColor='rgba(255,122,26,.7)'; ctx.shadowBlur=14;
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(80,30,0,.8)'; ctx.lineWidth=Math.max(1.5,r*0.12);
+    // ears
+    ctx.fillStyle='#c4470a';
+    [[-1,-1],[1,-1]].forEach(function(s){ ctx.beginPath(); ctx.moveTo(x+s[0]*r*0.55,y-r*0.7); ctx.lineTo(x+s[0]*r*0.85,y-r*1.05); ctx.lineTo(x+s[0]*r*0.2,y-r*0.95); ctx.closePath(); ctx.fill(); });
+    // stripes
+    ctx.strokeStyle='rgba(70,25,0,.65)';
+    for(var k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(x+k*r*0.4,y-r*0.45); ctx.lineTo(x+k*r*0.4,y+r*0.45); ctx.stroke(); }
+    // eyes
+    ctx.fillStyle='#1a0a00'; ctx.beginPath(); ctx.arc(x-r*0.28,y-r*0.05,r*0.1,0,7); ctx.arc(x+r*0.28,y-r*0.05,r*0.1,0,7); ctx.fill();
+    ctx.restore();
+  }
+  function drawGoat(x,y,r,dim){
+    ctx.save();
+    var g=ctx.createRadialGradient(x-r*0.3,y-r*0.35,r*0.2,x,y,r);
+    g.addColorStop(0,'#d6ffe6'); g.addColorStop(.55,dim?'#0a8a3a':'#00ff66'); g.addColorStop(1,'#045a26');
+    ctx.shadowColor='rgba(0,255,102,.5)'; ctx.shadowBlur=dim?4:10;
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+    ctx.shadowBlur=0; ctx.strokeStyle='rgba(0,60,24,.8)'; ctx.lineWidth=Math.max(1,r*0.1); ctx.stroke();
+    ctx.restore();
+  }
+
+  function render(){
+    var t=now();
+    ctx.clearRect(0,0,geo.size,geo.size);
+    // edges
+    ctx.strokeStyle='rgba(0,255,102,.22)'; ctx.lineWidth=1.5;
+    for(var e=0;e<EDGES.length;e++){ var a=pointAt(EDGES[e][0]), b=pointAt(EDGES[e][1]); ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+    // point dots
+    for(var i=0;i<PTS;i++){ var q=pointAt(i); ctx.fillStyle='rgba(0,255,102,.35)'; ctx.beginPath(); ctx.arc(q.x,q.y,3,0,7); ctx.fill(); }
+
+    // legal destinations for a selected goat
+    if(selected>=0 && phase==='move' && turn==='goat'){
+      var dests=goatDests(selected);
+      ctx.strokeStyle='rgba(255,212,59,.85)'; ctx.lineWidth=2.5;
+      for(var d=0;d<dests.length;d++){ var dp=pointAt(dests[d]); ctx.beginPath(); ctx.arc(dp.x,dp.y,geo.r*0.55,0,7); ctx.stroke(); }
+    }
+
+    // pieces (skip the one currently animating at its target)
+    var danger = (turn==='goat'&&!gameOver) ? capturableGoats() : {};
+    var pulse = 0.5+0.5*Math.sin(t/180);
+    for(var p2=0;p2<PTS;p2++){
+      if(anim && p2===anim.target) continue;
+      var pos=pointAt(p2);
+      if(occ[p2]===2){ drawTiger(pos.x,pos.y,geo.r); }
+      else if(occ[p2]===1){
+        drawGoat(pos.x,pos.y,geo.r,false);
+        if(danger[p2]){ ctx.strokeStyle='rgba(255,77,77,'+(0.45+0.55*pulse)+')'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(pos.x,pos.y,geo.r+5,0,7); ctx.stroke(); }
+        if(p2===selected){ ctx.strokeStyle='var(--amber)'; ctx.strokeStyle='rgba(255,212,59,.95)'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(pos.x,pos.y,geo.r+5,0,7); ctx.stroke(); }
+      }
+    }
+
+    // moving piece
+    if(anim){
+      var k=Math.min(1,(t-anim.t0)/anim.dur), e2=easeInOut(k);
+      var a=pointAt(anim.from), b=pointAt(anim.target);
+      var x=a.x+(b.x-a.x)*e2, y=a.y+(b.y-a.y)*e2;
+      if(occ[anim.target]===2) drawTiger(x,y,geo.r); else drawGoat(x,y,geo.r,false);
+      if(k>=1){ var cb=anim.cb; anim=null; if(cb) cb(); }
+    }
+
+    // capture flash
+    if(flash){ var fk=(t-flash.t)/360; if(fk>=1){ flash=null; } else { var fp=pointAt(flash.i); ctx.strokeStyle='rgba(255,122,26,'+(1-fk)+')'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(fp.x,fp.y,geo.r+geo.r*fk*1.4,0,7); ctx.stroke(); } }
+
+    requestAnimationFrame(render);
+  }
+
+  // ---------- hud / status ----------
+  function onBoardCount(){ var c=0; for(var i=0;i<PTS;i++) if(occ[i]===1) c++; return c; }
+  function updateHud(){
+    document.getElementById('toDrop').textContent=toDrop;
+    document.getElementById('onBoard').textContent=onBoardCount();
+    document.getElementById('eaten').textContent=eaten;
+  }
+  function setStatus(html){ document.getElementById('status').innerHTML=html; }
+  function boldDrop(){ return 'Drop a goat — <b>'+toDrop+'</b> left.'; }
+
+  function endGame(winner){
+    gameOver=true; locked=true; selected=-1;
+    var over=document.getElementById('over');
+    if(winner==='goat'){ over.className='over show win'; document.getElementById('overTitle').textContent='THE HERD HOLDS'; document.getElementById('overMsg').textContent='Every tiger is penned in — you trapped them with '+onBoardCount()+' goats standing. Bagh-Chal goes to the herder.'; sfxWin(); }
+    else { over.className='over show lose'; document.getElementById('overTitle').textContent='THE TIGERS FEAST'; document.getElementById('overMsg').textContent='Five goats taken. The hills belong to the tigers tonight.'; sfxLose(); }
+  }
+  function hideOver(){ document.getElementById('over').className='over'; }
+
+  // ---------- audio (synth, no files) ----------
+  var actx=null;
+  function ensureAudio(){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){} }
+  function tone(f,t,d,ty,vol){ try{ if(!actx)return; var o=actx.createOscillator(),g=actx.createGain(); o.type=ty||'square'; o.frequency.setValueAtTime(f,t); o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol||.2,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.start(t); o.stop(t+d+.03); }catch(e){} }
+  function sfxPlace(){ if(!actx)return; var t=actx.currentTime; tone(760,t,.06,'square',.18); tone(1040,t+.05,.06,'square',.14); }
+  function sfxStep(){ if(!actx)return; var t=actx.currentTime; tone(300,t,.09,'triangle',.18); }
+  function sfxGrowl(){ if(!actx)return; var t=actx.currentTime; tone(120,t,.18,'sawtooth',.22); }
+  function sfxChomp(){ if(!actx)return; var t=actx.currentTime; tone(90,t,.16,'sawtooth',.28); tone(70,t+.05,.18,'sawtooth',.22); }
+  function sfxDeny(){ if(!actx)return; var t=actx.currentTime; tone(200,t,.12,'sawtooth',.16); }
+  function sfxWin(){ if(!actx)return; var t=actx.currentTime, n=[523,659,784,1047]; for(var i=0;i<4;i++) tone(n[i],t+i*.1,.16,'square',.2); }
+  function sfxLose(){ if(!actx)return; var t=actx.currentTime, n=[392,330,262,196]; for(var i=0;i<4;i++) tone(n[i],t+i*.12,.2,'sawtooth',.2); }
+
+  // ---------- wire up ----------
+  document.getElementById('newBtn').addEventListener('click', function(){ ensureAudio(); newGame(); });
+  document.getElementById('overBtn').addEventListener('click', function(){ ensureAudio(); newGame(); });
+
+  var rulesModal=document.getElementById('rules');
+  function openRules(){ rulesModal.classList.add('show'); }
+  function closeRules(){ rulesModal.classList.remove('show'); }
+  document.getElementById('rulesBtn').addEventListener('click', openRules);
+  document.getElementById('rulesClose').addEventListener('click', closeRules);
+  document.getElementById('rulesGot').addEventListener('click', closeRules);
+  rulesModal.addEventListener('click', function(e){ if(e.target===rulesModal) closeRules(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeRules(); });
+
+  newGame(); resize(); requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

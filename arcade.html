@@ -37,6 +37,7 @@
   .game.locked { opacity:.6; }
   .game.locked .play { border-color:var(--green-faint); color:var(--green-dim); }
   .game .tag { position:absolute; top:12px; right:12px; font-size:.62rem; letter-spacing:1px; color:var(--amber); border:1px solid var(--amber); border-radius:3px; padding:2px 6px; }
+  .game .origin { display:block; margin-top:7px; color:var(--green-dim); font-size:.72rem; letter-spacing:1px; }
 
   .soon { border:1px dashed var(--green-faint); border-radius:5px; padding:16px; color:var(--green-dim); background:rgba(0,20,8,.4); }
   .soon h4 { margin:0 0 6px; font-size:1.05rem; color:#5fcf8a; }
@@ -63,6 +64,10 @@
   .exit-float { position:fixed; top:14px; right:14px; display:none; z-index:1600; background:rgba(0,0,0,.6); color:var(--amber); border:2px solid var(--amber); border-radius:30px; padding:9px 18px; font-family:inherit; font-weight:bold; letter-spacing:2px; font-size:.82rem; cursor:pointer; box-shadow:0 0 16px rgba(255,212,59,.4); }
   .exit-float:hover { background:var(--amber); color:#000; }
   .crt-stage.zoom .exit-float { display:block; }
+  /* real fullscreen play: the iframe renders at native viewport resolution so the game is actually playable (a CSS-scaled iframe keeps its tiny internal size and gets clipped) */
+  .crt-stage.playing .room { background:#000; }
+  .crt-stage.playing .screen { position:fixed; inset:0; width:100vw; height:100vh; aspect-ratio:auto; border-radius:0; box-shadow:none; z-index:1550; }
+  .crt-stage.playing .glass { opacity:.45; }
 
   /* out of credits modal */
   .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.85); z-index:1700; padding:20px; }
@@ -93,10 +98,15 @@
 
   <div class="eyebrow">&#9654; Pick a machine — one credit per play</div>
   <div class="grid">
-    <div class="game" id="firepath" role="button" tabindex="0" aria-label="Play Fire Path, costs one credit">
+    <div class="game" data-file="memorymaster.html" role="button" tabindex="0" aria-label="Play Fire Path, costs one credit">
       <h3>Fire Path</h3>
       <p>Memorize the burning path before the lights go out, then trace it in the dark. Stray once and your flame dies.</p>
       <div class="row"><span class="play">&#9654; Play (1 credit)</span><span class="badge">62 KB</span></div>
+    </div>
+    <div class="game" data-file="tigertrap.html" role="button" tabindex="0" aria-label="Play Tiger Trap, costs one credit">
+      <h3>Tiger Trap</h3>
+      <p>Four tigers hunt the herd. Drop your goats and pen the tigers in before they devour five of you.<span class="origin">Bagh-Chal &middot; Nepal &middot; a herder's game of nerve</span></p>
+      <div class="row"><span class="play">&#9654; Play (1 credit)</span><span class="badge">20 KB</span></div>
     </div>
   </div>
 
@@ -144,15 +154,24 @@
 
 <script>
   (function () {
+    var STORE='arcade_credits';
+    function loadStored(){ try{ var v=sessionStorage.getItem(STORE); if(v===null) return null; var n=parseInt(v,10); return isNaN(n)?null:n; }catch(e){ return null; } }
+    function saveCredits(n){ try{ sessionStorage.setItem(STORE,String(n)); }catch(e){} }
+
+    // session is the source of truth; the ?credits param only seeds a fresh/direct arrival
     var p=new URLSearchParams(location.search);
-    var credits=parseInt(p.get('credits'),10); if(isNaN(credits)) credits=0; credits=Math.max(0,Math.min(3,credits));
+    var stored=loadStored();
+    var credits = stored!==null ? stored : parseInt(p.get('credits'),10);
+    if(isNaN(credits)) credits=0; credits=Math.max(0,Math.min(3,credits));
+    saveCredits(credits);
+
     var busy=false, audioCtx=null;
     var discs=[].slice.call(document.querySelectorAll('#meter .disc'));
     var meter=document.getElementById('meter');
     var stage=document.getElementById('stage'), room=document.getElementById('room'), frame=document.getElementById('frame');
     var screen=document.querySelector('.screen'), exitBtn=document.getElementById('exitBtn');
     var modal=document.getElementById('modal'), browse=document.getElementById('browse'), toast=document.getElementById('toast');
-    var firepath=document.getElementById('firepath');
+    var games=[].slice.call(document.querySelectorAll('.game'));
 
     function reduced(){ return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
     function ensureAudio(){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }catch(e){} }
@@ -163,7 +182,12 @@
 
     function render(){ for(var i=0;i<discs.length;i++) discs[i].classList.toggle('lit', i<credits); updateLockState(); }
     function syncUrl(){ var q=new URLSearchParams(location.search); q.set('credits',credits); history.replaceState(null,'','?'+q.toString()); }
-    function updateLockState(){ if(credits<=0){ firepath.classList.add('locked'); if(!firepath.querySelector('.tag')){ var t=document.createElement('span'); t.className='tag'; t.textContent='INSERT COIN'; firepath.appendChild(t);} } else { firepath.classList.remove('locked'); var ex=firepath.querySelector('.tag'); if(ex) ex.remove(); } }
+    function updateLockState(){
+      for(var i=0;i<games.length;i++){ var g=games[i];
+        if(credits<=0){ g.classList.add('locked'); if(!g.querySelector('.tag')){ var t=document.createElement('span'); t.className='tag'; t.textContent='INSERT COIN'; g.appendChild(t);} }
+        else { g.classList.remove('locked'); var ex=g.querySelector('.tag'); if(ex) ex.remove(); }
+      }
+    }
 
     function toastMsg(msg){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ toast.classList.remove('show'); },1900); }
     function showModal(){ modal.classList.add('show'); }
@@ -173,49 +197,84 @@
       ensureAudio();
       if(credits<=0){ noCredit(); return; }
       if(busy) return;
-      credits--; syncUrl(); render(); spendSound();
+      credits--; saveCredits(credits); syncUrl(); render(); spendSound();
       openCRT(file);
     }
 
+    // transform that scales the on-screen monitor to fill the viewport (used only for the entry/exit animation)
+    function computeZoom(){
+      var rect=screen.getBoundingClientRect(), vw=window.innerWidth, vh=window.innerHeight;
+      var s=Math.max(vw/rect.width, vh/rect.height)*1.02;
+      var tx=(vw - s*rect.width)/2 - s*rect.left;
+      var ty=(vh - s*rect.height)/2 - s*rect.top;
+      return 'translate('+tx+'px,'+ty+'px) scale('+s+')';
+    }
+    function onTransformEnd(el, cb){
+      var done=false;
+      function h(e){ if(e && e.propertyName && e.propertyName!=='transform') return; if(done) return; done=true; clearTimeout(tm); el.removeEventListener('transitionend',h); cb(); }
+      var tm=setTimeout(h, 1300); // fallback if transitionend never fires
+      el.addEventListener('transitionend',h);
+    }
     function openCRT(file){
       busy=true;
       frame.src=file;
       stage.style.display='block'; stage.setAttribute('aria-hidden','false');
       requestAnimationFrame(function(){ stage.classList.add('on'); powerSound(); });
-      var r=reduced();
-      setTimeout(function(){ zoomIn(r); }, r?0:650);
+      if(reduced()){ enterPlaying(); busy=false; return; }
+      setTimeout(dollyIn, 650);
     }
-    function zoomIn(r){
-      var rect=screen.getBoundingClientRect(), vw=window.innerWidth, vh=window.innerHeight;
-      var s=Math.max(vw/rect.width, vh/rect.height)*1.02;
-      var tx=(vw - s*rect.width)/2 - s*rect.left;
-      var ty=(vh - s*rect.height)/2 - s*rect.top;
-      room.style.transition = r ? 'none' : 'transform 1.15s cubic-bezier(.7,.02,.27,1)';
-      void room.offsetWidth;
-      room.style.transform='translate('+tx+'px,'+ty+'px) scale('+s+')';
+    function dollyIn(){
       stage.classList.add('zoom');
-      busy=false;
+      room.style.transition='transform 1.15s cubic-bezier(.7,.02,.27,1)';
+      void room.offsetWidth;
+      room.style.transform=computeZoom();
+      onTransformEnd(room, function(){ enterPlaying(); busy=false; });
+    }
+    // once the camera has "entered" the cabinet, swap the scaled monitor for a true
+    // fullscreen iframe so the game renders at the real viewport size and is playable.
+    function enterPlaying(){
+      stage.classList.add('zoom');     // keep EXIT visible
+      stage.classList.add('playing');  // .screen -> fixed 100vw x 100vh, iframe reflows at native res
+      room.style.transition='none';
+      room.style.transform='';
     }
     function exit(){
       if(busy) return; busy=true;
-      var r=reduced();
-      room.style.transition = r ? 'none' : 'transform 1s cubic-bezier(.7,.02,.27,1)';
-      room.style.transform='';
+      if(reduced()){ finishExit(); return; }
+      stage.classList.remove('playing');          // screen returns to the monitor box (measured below)
+      room.style.transition='none';
+      room.style.transform=computeZoom();          // snap to the zoomed-in framing...
+      void room.offsetWidth;
+      room.style.transition='transform 1s cubic-bezier(.7,.02,.27,1)';
+      room.style.transform='';                     // ...then dolly back out
       stage.classList.remove('zoom');
-      var done=function(){ stage.classList.remove('on'); stage.style.display='none'; stage.setAttribute('aria-hidden','true'); frame.src='about:blank'; busy=false; afterExit(); };
-      if(r){ done(); } else { setTimeout(done,1000); }
+      onTransformEnd(room, finishExit);
+    }
+    function finishExit(){
+      stage.classList.remove('on','zoom','playing');
+      stage.style.display='none'; stage.setAttribute('aria-hidden','true');
+      room.style.transition='none'; room.style.transform='';
+      frame.src='about:blank'; busy=false; afterExit();
     }
     function afterExit(){ if(credits<=0){ showModal(); } else { toastMsg(credits+' credit'+(credits===1?'':'s')+' left'); } }
 
-    firepath.addEventListener('click', function(){ launch('memorymaster.html'); });
-    firepath.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '||e.code==='Space'){ e.preventDefault(); launch('memorymaster.html'); } });
+    for(var gi=0; gi<games.length; gi++){ (function(g){
+      var file=g.getAttribute('data-file');
+      g.addEventListener('click', function(){ launch(file); });
+      g.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '||e.code==='Space'){ e.preventDefault(); launch(file); } });
+    })(games[gi]); }
     exitBtn.addEventListener('click', exit);
     browse.addEventListener('click', function(){ modal.classList.remove('show'); });
     document.addEventListener('keydown', function(e){ if(e.key==='Escape' && stage.classList.contains('zoom')) exit(); });
-    window.addEventListener('resize', function(){ if(stage.classList.contains('zoom')){ var rr=reduced(); var prev=room.style.transition; room.style.transition='none'; zoomIn(true); room.style.transition=prev; } });
+    window.addEventListener('resize', function(){
+      if(stage.classList.contains('zoom') && !stage.classList.contains('playing')){
+        var prev=room.style.transition; room.style.transition='none'; room.style.transform=computeZoom(); room.style.transition=prev;
+      }
+    });
+    // back/forward cache or returning to the hall: re-read the session's credit count
+    window.addEventListener('pageshow', function(){ if(stage.style.display!=='block'){ var s=loadStored(); if(s!==null){ credits=Math.max(0,Math.min(3,s)); render(); } } });
 
     render();
-    if(credits<=0){ /* arrived empty: let them browse, locked */ }
   })();
 </script>
 </body>

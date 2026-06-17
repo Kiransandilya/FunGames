@@ -108,7 +108,11 @@
     var box=document.getElementById('coinbox'), label=document.getElementById('coinLabel'), hint=document.getElementById('coinHint');
     var coin=document.getElementById('coin'), startbtn=document.getElementById('startbtn'), bootflash=document.getElementById('bootflash');
     var discs=[].slice.call(document.querySelectorAll('#coins .disc'));
-    var MAX=3, credits=0, busy=false, audioCtx=null;
+    var MAX=3, busy=false, audioCtx=null;
+    var STORE='arcade_credits';
+    function loadCredits(){ try{ var v=parseInt(sessionStorage.getItem(STORE),10); if(isNaN(v)) return 0; return Math.max(0,Math.min(MAX,v)); }catch(e){ return 0; } }
+    function saveCredits(n){ try{ sessionStorage.setItem(STORE,String(n)); }catch(e){} }
+    var credits=loadCredits(); // carry over coins held earlier this session
     function reduced(){ return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
     function ensureAudio(){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }catch(e){} }
     function beep(f,t,d,ty){ try{ var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type=ty||'square'; o.frequency.value=f; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.22,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.start(t); o.stop(t+d+.02); }catch(e){} }
@@ -120,7 +124,7 @@
     function insert(){
       ensureAudio();
       if(credits>=MAX){ denySound(); return; }
-      credits++; coinSound(); renderCoins();
+      credits++; saveCredits(credits); coinSound(); renderCoins();
       if(!reduced()){ var d=discs[credits-1]; d.classList.add('bump'); setTimeout(function(){d.classList.remove('bump');},250); coin.classList.remove('drop'); void coin.offsetWidth; coin.classList.add('drop'); }
       startbtn.classList.add('show');
       hint.textContent = credits>=MAX ? 'credits full · press start' : 'click for another · or press start';
@@ -136,6 +140,17 @@
     box.addEventListener('click', insert);
     box.addEventListener('keydown', function(e){ if(e.key===' '||e.code==='Space'||e.key==='Enter'){ e.preventDefault(); insert(); } });
     startbtn.addEventListener('click', start);
+
+    // reflect credits carried over in this session (also after back/forward-cache restores)
+    function refreshUI(){
+      renderCoins();
+      startbtn.classList.toggle('show', credits>0);
+      if(credits>=MAX){ hint.textContent='credits full · press start'; label.textContent='CREDITS FULL'; label.classList.add('full'); }
+      else if(credits>0){ hint.textContent='click for another · or press start'; label.textContent='INSERT COIN'; label.classList.remove('full'); }
+      else { hint.textContent='click to insert · up to 3 credits'; label.textContent='INSERT COIN'; label.classList.remove('full'); }
+    }
+    refreshUI();
+    window.addEventListener('pageshow', function(){ credits=loadCredits(); refreshUI(); });
   })();
 
   (function () {
