@@ -22,6 +22,10 @@
   .scorebar .p2name{ color:var(--p2); text-shadow:0 0 8px var(--p2); }
   .scorebar #p1score{ color:var(--p1); } .scorebar #p2score{ color:var(--p2); }
   .scorebar .dash{ color:var(--green-dim); }
+  .scorebar #p1score.flash,.scorebar #p2score.flash{ animation:sflash .5s 3; }
+  @keyframes sflash{ 50%{ color:#ff4d4d; text-shadow:0 0 12px #ff4d4d; } }
+  .ledger{ font-size:clamp(9px,2vw,11px); letter-spacing:1px; color:var(--green-dim); min-height:1em; margin-top:-2px; }
+  .overlay .danger{ color:#ff4d4d; text-shadow:0 0 16px #ff4d4d; letter-spacing:4px; }
 
   .stage{ position:relative; line-height:0; }
   canvas{ display:block; background:#020a08; border:2px solid var(--green-faint); border-radius:8px;
@@ -77,6 +81,7 @@
   <h1>GRID DUEL</h1>
   <p class="sub">light cycles · wall your rival in</p>
   <div class="scorebar"><span class="p1name">P1</span> <span id="p1score">0</span> <span class="dash">—</span> <span id="p2score">0</span> <span class="p2name">P2</span></div>
+  <div class="ledger" id="ledger"></div>
 
   <div class="stage">
     <canvas id="arena"></canvas>
@@ -97,7 +102,7 @@
       <p><b>Crash into any wall</b> — the edge, your own trail, or your rival's — and you're out. Last cycle riding wins the round. <b>First to 5</b> takes the match.</p>
       <p><span style="color:var(--p1)">Player 1</span> steers with <b>W A S D</b>. <span style="color:var(--p2)">Player 2</span> steers with the <b>arrow keys</b>. On a phone, <b>swipe</b> to steer in 1‑player mode.</p>
       <p>Pick <b>1 Player</b> to duel the <b>AI</b>, or <b>2 Players</b> to grab a friend on the same keyboard. The cycles speed up the longer a round lasts — don't get boxed in.</p>
-      <p><b>Play Online</b> connects you to a faraway friend: pick a room code, share the link, and you both steer with <b>W A S D</b> on your own screens. (Online needs the hosted page — not a local file.)</p>
+      <p><b>Play Online</b> connects you to a faraway friend: pick a room code, share the link, and you both steer with the <b>arrow keys</b> on your own screens. (Online needs the hosted page — not a local file.)</p>
       <p><b>Difficulty</b> sets the pace and how sharp the AI plays: <span style="color:var(--green)">Easy</span> is slow and forgiving; <span style="color:var(--amber)">Expert</span> is fast and hunts you down — it'll cut off your space, not just survive.</p>
     </div>
   </div>
@@ -153,7 +158,7 @@
     tick = DIFF[difficulty].start; acc = 0;
     state = 'count'; stateTimer = 1900; lastCd = -1; // 3..2..1
     sfxCount();
-    if (mode === 'online' && role === 'host') net.send({ t:'rs' });
+    if (mode === 'online' && role === 'host') net.send({ t:'rs', s:[scores.p1,scores.p2] });
   }
   function resetMatch(m){ mode = m; scores = { p1:0, p2:0 }; renderScore(); resetRound(); }
 
@@ -223,20 +228,30 @@
     tick = Math.max(D.min, tick - D.ramp);
     if (d1 || d2) endRound(d1, d2);
   }
+  function escapes(p){ // could the loser have turned somewhere safe? (drives the near-miss line)
+    let n = 0;
+    for (const k in DIRS){ const d = DIRS[k]; if (opposite(d, p.dir)) continue; const c = add(p.head, d); if (inBounds(c) && !occupied(c)) n++; }
+    return n;
+  }
+  function roundOverlay(msg, cls, near, mp){          // freeze-frame the crash, then the result
+    const html = (mp ? '<div class="head danger">MATCH POINT</div>' : '') + '<div class="head '+cls+'">'+msg+'</div>' + (near ? '<div class="sub2">one cell from safe…</div>' : '');
+    setTimeout(() => { if (state === 'round' || state === 'match') showOverlay(html); }, 480);
+  }
   function endRound(d1, d2){
     sfxCrash();
-    let msg, cls;
+    let msg, cls, near = false;
     if (d1 && d2){ msg = 'DRAW'; cls = 'draw'; }
-    else if (d1){ scores.p2++; msg = 'P2 SCORES'; cls = 'win2'; }
-    else { scores.p1++; msg = 'P1 SCORES'; cls = 'win1'; }
+    else if (d1){ scores.p2++; msg = 'P2 SCORES'; cls = 'win2'; near = escapes(p1) > 0; flashScore(2); }
+    else { scores.p1++; msg = 'P1 SCORES'; cls = 'win1'; near = escapes(p2) > 0; flashScore(1); }
     renderScore();
     const matchOver = scores.p1 >= WINS || scores.p2 >= WINS;
+    const mp = !matchOver && (scores.p1 === WINS-1 || scores.p2 === WINS-1);
     if (mode === 'online' && role === 'host'){
       if (matchOver) net.send({ t:'mo', w: scores.p1>=WINS?1:2, s:[scores.p1,scores.p2] });
-      else net.send({ t:'ro', m:msg, c:cls, s:[scores.p1,scores.p2] });
+      else net.send({ t:'ro', m:msg, c:cls, s:[scores.p1,scores.p2], near, mp });
     }
     if (matchOver){ state = 'match'; stateTimer = 0; showMatch(); }
-    else { state = 'round'; stateTimer = 1300; showOverlay('<div class="head '+cls+'">'+msg+'</div>'); }
+    else { state = 'round'; stateTimer = 1600; roundOverlay(msg, cls, near, mp); }
   }
 
   // ---------- loop ----------
@@ -254,6 +269,9 @@
     } else if (state === 'round'){
       stateTimer -= dt;
       if (stateTimer <= 0) resetRound();
+    } else if (state === 'match' && mode === 'online' && role === 'host'){
+      stateTimer -= dt;
+      if (stateTimer <= 0){ scores = { p1:0, p2:0 }; renderScore(); resetRound(); } // frictionless auto-rematch
     }
     draw();
     requestAnimationFrame(frame);
@@ -310,13 +328,21 @@
     document.getElementById('mode2').onclick = () => { ensureAudio(); resetMatch('2p'); };
     document.getElementById('modeo').onclick = () => { ensureAudio(); showOnline(); };
   }
-  function backToMenu(){ if (mode === 'online') net.close(); mode = '2p'; role = null; setHint(); showMenu(); }
+  function backToMenu(){ if (mode === 'online') net.close(); mode = '2p'; role = null; setHint(); showLedger(); showMenu(); }
   function showMatch(){
-    const p1won = scores.p1 >= WINS;
-    showOverlay('<div class="head '+(p1won?'win1':'win2')+'">'+(p1won?'P1':'P2')+' WINS THE MATCH</div>'+
-      '<button id="again">&#10227; '+(mode==='online'?'Back to Menu':'Play Again')+'</button>', true);
-    document.getElementById('again').onclick = () => { ensureAudio(); if (mode==='online') backToMenu(); else showMenu(); };
+    const p1won = scores.p1 >= WINS, w = p1won ? 1 : 2, cls = p1won ? 'win1' : 'win2';
     sfxWin();
+    if (mode === 'online'){
+      bumpLedger(w === localPlayer()); showLedger();           // rival-specific grudge score
+      setTimeout(() => { if (state === 'match') showOverlay('<div class="head '+cls+'">P'+w+' WINS THE MATCH</div><div class="sub2">rematch starting…</div>'); }, 480);
+      state = 'match'; stateTimer = (role === 'host') ? 2600 : 999999;  // host drives the in-place rematch
+    } else {
+      state = 'match';
+      setTimeout(() => { if (state === 'match'){
+        showOverlay('<div class="head '+cls+'">P'+w+' WINS THE MATCH</div><button id="again">&#10227; Play Again</button>', true);
+        const a = document.getElementById('again'); if (a) a.onclick = () => { ensureAudio(); showMenu(); };
+      } }, 480);
+    }
   }
 
   // ---------- online: host-authoritative over a PeerJS data channel (lazy-loaded, free public broker) ----------
@@ -347,7 +373,7 @@
   };
 
   function onConnected(){
-    mode = 'online'; setHint();
+    mode = 'online'; setHint(); showLedger();
     if (role === 'host'){ scores = { p1:0, p2:0 }; renderScore(); resetRound(); }
     else showOverlay('<div class="head win1">connected &#10003;</div><div class="sub2">waiting for host to start&hellip;</div>');
   }
@@ -366,14 +392,17 @@
       return;
     }
     switch (d.t){                                         // guest renders the host's authoritative state
-      case 'rs': setupBoard(); clearOverlay(); break;
-      case 'cd': showOverlay('<div class="big">'+(d.n>0?d.n:'')+'</div>'); break;
-      case 'go': clearOverlay(); sfxGo(); break;
+      case 'rs': if (d.s){ scores={p1:d.s[0],p2:d.s[1]}; renderScore(); } setupBoard(); clearOverlay(); state='count'; break;
+      case 'cd': showOverlay('<div class="big">'+(d.n>0?d.n:'')+'</div>'); state='count'; break;
+      case 'go': clearOverlay(); sfxGo(); state='play'; break;  // guest must be in 'play' so its steering keys fire
       case 'tk': applyHead(p1, d.a, 1); applyHead(p2, d.b, 2); p1.alive=d.av[0]; p2.alive=d.av[1]; break;
-      case 'ro': scores={p1:d.s[0],p2:d.s[1]}; renderScore(); sfxCrash(); showOverlay('<div class="head '+d.c+'">'+d.m+'</div>'); break;
-      case 'mo': scores={p1:d.s[0],p2:d.s[1]}; renderScore(); sfxWin();
-        showOverlay('<div class="head '+(d.w===1?'win1':'win2')+'">'+(d.w===1?'P1':'P2')+' WINS THE MATCH</div><button id="back">&#9664; Back to Menu</button>', true);
-        { const bk=document.getElementById('back'); if (bk) bk.onclick = () => { ensureAudio(); backToMenu(); }; } break;
+      case 'ro': scores={p1:d.s[0],p2:d.s[1]}; renderScore(); sfxCrash(); state='round';
+        if (d.c==='win1') flashScore(1); else if (d.c==='win2') flashScore(2);
+        { const mp = (scores.p1===WINS-1 || scores.p2===WINS-1);
+          const html = (mp?'<div class="head danger">MATCH POINT</div>':'')+'<div class="head '+d.c+'">'+d.m+'</div>'+(d.near?'<div class="sub2">one cell from safe…</div>':'');
+          setTimeout(() => { if (mode==='online') showOverlay(html); }, 480); } break;
+      case 'mo': scores={p1:d.s[0],p2:d.s[1]}; renderScore(); state='match'; bumpLedger(d.w===localPlayer()); showLedger(); sfxWin();
+        setTimeout(() => { if (mode==='online') showOverlay('<div class="head '+(d.w===1?'win1':'win2')+'">P'+d.w+' WINS THE MATCH</div><div class="sub2">rematch starting…</div>'); }, 480); break;
     }
   }
   function showOnline(){
@@ -399,8 +428,8 @@
     const h = document.getElementById('hint');
     if (mode === 'online'){
       h.innerHTML = role === 'host'
-        ? 'You are <span class="c">P1 (cyan)</span> — steer with <span style="color:var(--green)">W A S D</span>'
-        : 'You are <span class="m">P2 (magenta)</span> — steer with <span style="color:var(--green)">W A S D</span>';
+        ? 'You are <span class="c">P1 (cyan)</span> — steer with the <span style="color:var(--green)">arrow keys</span>'
+        : 'You are <span class="m">P2 (magenta)</span> — steer with the <span style="color:var(--green)">arrow keys</span>';
     } else {
       h.innerHTML = '<span class="c">P1: W A S D</span> &nbsp;·&nbsp; <span class="m">P2: &#9664; &#9650; &#9660; &#9654;</span> &nbsp;·&nbsp; first to 5';
     }
@@ -410,12 +439,14 @@
   const K1 = { KeyW:'up', KeyS:'down', KeyA:'left', KeyD:'right' };
   const K2 = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right' };
   document.addEventListener('keydown', (e) => {
+    const el = e.target;                                  // never hijack keys while typing (e.g. the room code)
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
     if (e.code in K1 || e.code in K2 || e.code === 'Space') e.preventDefault();
     if (state !== 'play') return;
-    if (mode === 'online'){                               // both players steer with WASD on their own screen
-      if (e.code in K1){
-        if (role === 'host'){ const d = DIRS[K1[e.code]]; if (p1.alive && !opposite(d, p1.dir)) p1.pending = d; }
-        else net.send({ t:'in', dir: K1[e.code] });       // guest sends its steering to the host
+    if (mode === 'online'){                               // each player is on their own screen → both use the arrow keys
+      if (e.code in K2){
+        if (role === 'host'){ const d = DIRS[K2[e.code]]; if (p1.alive && !opposite(d, p1.dir)) p1.pending = d; }
+        else net.send({ t:'in', dir: K2[e.code] });       // guest sends its steering to the host
       }
       return;
     }
@@ -448,11 +479,18 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') howto.classList.remove('show'); });
 
   function renderScore(){ p1scoreEl.textContent = scores.p1; p2scoreEl.textContent = scores.p2; }
+  function flashScore(p){ const el = p===1 ? p1scoreEl : p2scoreEl; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  function localPlayer(){ return role === 'guest' ? 2 : 1; }   // online: host=P1, guest=P2
+  // per-room rival ledger (online): same friends rejoin the same code → a durable grudge score
+  function ledgerKey(){ return 'fg_gridduel_' + (location.hash.slice(1)||'').toUpperCase(); }
+  function getLedger(){ try { return JSON.parse(localStorage.getItem(ledgerKey())) || {mine:0,theirs:0}; } catch(e){ return {mine:0,theirs:0}; } }
+  function bumpLedger(localWon){ try { const l=getLedger(); if(localWon) l.mine++; else l.theirs++; localStorage.setItem(ledgerKey(), JSON.stringify(l)); } catch(e){} }
+  function showLedger(){ const el=document.getElementById('ledger'); if(!el) return; if (mode==='online'){ const l=getLedger(); el.textContent='this room  —  YOU '+l.mine+' : '+l.theirs+' RIVAL'; } else el.textContent=''; }
   function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 
   // ---------- sizing: fit the arena to the window, never scroll ----------
   function reservedH(){
-    const sel = ['h1','.sub','.scorebar','.hint','.controls'];
+    const sel = ['h1','.sub','.scorebar','.ledger','.hint','.controls'];
     let h = 0; for (const s of sel){ const e = document.querySelector(s); if (e) h += e.offsetHeight; }
     return h + 9*5 + 24 + 14;
   }
