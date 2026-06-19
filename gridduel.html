@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Duel — Light Cycles</title>
+<style>
+  :root{ --green:#00ff66; --green-dim:#0a8a3a; --green-faint:#075028; --amber:#ffd43b;
+         --p1:#22e3ff; --p1dim:#0b8aa6; --p2:#ff4dc4; --p2dim:#a02684; --bg:#000; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{ min-height:100vh; padding:10px 0; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:8px;
+        background:radial-gradient(circle at 50% 38%,#04140f,#000 78%); color:var(--green); font-family:'Courier New',Courier,monospace;
+        overflow-x:hidden; overflow-y:auto; }
+  body::before{ content:""; position:fixed; inset:0; z-index:9; pointer-events:none;
+                background:repeating-linear-gradient(0deg,rgba(0,0,0,.18),rgba(0,0,0,.18) 1px,transparent 1px,transparent 2px); }
+
+  h1{ margin:0; font-size:clamp(20px,4.4vw,30px); letter-spacing:8px; text-shadow:0 0 12px var(--p1),0 0 22px var(--p2); }
+  .sub{ margin:0; font-size:clamp(10px,2.2vw,12px); letter-spacing:2px; color:var(--green-dim); text-transform:uppercase; }
+  .scorebar{ display:flex; align-items:center; gap:clamp(8px,2vw,16px); font-size:clamp(15px,3.2vw,22px); font-weight:bold; letter-spacing:2px; }
+  .scorebar .p1name{ color:var(--p1); text-shadow:0 0 8px var(--p1); }
+  .scorebar .p2name{ color:var(--p2); text-shadow:0 0 8px var(--p2); }
+  .scorebar #p1score{ color:var(--p1); } .scorebar #p2score{ color:var(--p2); }
+  .scorebar .dash{ color:var(--green-dim); }
+
+  .stage{ position:relative; line-height:0; }
+  canvas{ display:block; background:#020a08; border:2px solid var(--green-faint); border-radius:8px;
+          box-shadow:inset 0 0 50px rgba(0,0,0,.8),0 0 22px rgba(0,255,102,.1); touch-action:none; }
+
+  .overlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+            text-align:center; font-family:inherit; padding:16px; }
+  .overlay.hide{ display:none; }
+  .overlay .big{ font-size:clamp(40px,12vw,90px); font-weight:bold; color:#fff; text-shadow:0 0 18px var(--green); line-height:1; }
+  .overlay .head{ font-size:clamp(16px,4vw,26px); letter-spacing:3px; }
+  .overlay .win1{ color:var(--p1); text-shadow:0 0 16px var(--p1); }
+  .overlay .win2{ color:var(--p2); text-shadow:0 0 16px var(--p2); }
+  .overlay .draw{ color:var(--amber); text-shadow:0 0 14px var(--amber); }
+  .overlay .diffrow{ display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
+  .overlay .moderow{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .diffchip{ font-size:clamp(10px,2.3vw,13px); padding:6px 13px; border:2px solid var(--green-faint);
+             color:var(--green-dim); background:rgba(0,40,16,.5); letter-spacing:1px; }
+  .diffchip:hover{ background:rgba(0,40,16,.5); border-color:var(--green); color:var(--green); }
+  .diffchip.active{ background:rgba(0,40,16,.5); border-color:var(--amber); color:var(--amber); box-shadow:0 0 10px rgba(255,212,59,.4); }
+  .overlay .sub2{ font-size:clamp(10px,2.3vw,13px); letter-spacing:1px; color:var(--green-dim); }
+  .overlay .netrow{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; }
+  .overlay .netstatus{ font-size:clamp(11px,2.4vw,14px); letter-spacing:1px; color:var(--amber); min-height:1.2em; }
+  .overlay input{ font-family:inherit; font-size:clamp(13px,3vw,16px); text-transform:uppercase; letter-spacing:3px; width:130px; text-align:center;
+                  background:#02160c; color:var(--green); border:2px solid var(--green-faint); border-radius:8px; padding:8px 10px; }
+  .overlay .ghost2{ border-color:var(--green-faint); color:var(--green-dim); font-size:clamp(10px,2.2vw,12px); padding:6px 12px; }
+  .overlay .ghost2:hover{ background:var(--green-faint); color:#001; }
+
+  button{ font-family:inherit; font-size:clamp(12px,2.6vw,15px); letter-spacing:2px; text-transform:uppercase; color:var(--green);
+          background:rgba(0,40,16,.6); border:2px solid var(--green); border-radius:30px; padding:clamp(8px,1.6vw,12px) clamp(14px,3.4vw,22px);
+          cursor:pointer; transition:.16s; }
+  button:hover{ background:var(--green); color:#000; }
+  button.ghost{ border-color:var(--green-faint); color:var(--green-dim); }
+  button.ghost:hover{ background:var(--green-faint); color:#001; }
+  button.p1btn{ border-color:var(--p1); color:var(--p1); } button.p1btn:hover{ background:var(--p1); color:#001; }
+  button.p2btn{ border-color:var(--p2); color:var(--p2); } button.p2btn:hover{ background:var(--p2); color:#001; }
+
+  .hint{ font-size:clamp(10px,2.3vw,13px); letter-spacing:1px; color:var(--green-dim); text-align:center; max-width:96vw; }
+  .hint .k{ color:var(--green); } .hint .c{ color:var(--p1); } .hint .m{ color:var(--p2); }
+  .controls{ display:flex; gap:clamp(8px,2vw,16px); flex-wrap:wrap; justify-content:center; }
+
+  .modal{ position:fixed; inset:0; z-index:30; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.86); }
+  .modal.show{ display:flex; }
+  .modal-card{ position:relative; width:100%; max-width:440px; max-height:86vh; overflow-y:auto; text-align:left;
+               border:2px solid var(--green); border-radius:14px; padding:26px 24px 22px; background:linear-gradient(160deg,#0b2a16,#04140a);
+               box-shadow:0 0 50px rgba(0,255,102,.2); }
+  .modal-card h2{ margin:0 0 12px; font-size:1rem; letter-spacing:2px; color:var(--amber); }
+  .modal-card p{ margin:0 0 10px; font-size:.85rem; line-height:1.6; color:#9dffc1; }
+  .modal-card .x{ position:absolute; top:6px; right:8px; border:none; background:none; color:var(--green-dim); font-size:1.5rem; line-height:1; padding:4px 9px; border-radius:50%; cursor:pointer; }
+  .modal-card .x:hover{ color:var(--green); background:rgba(0,255,102,.12); }
+</style>
+</head>
+<body>
+  <h1>GRID DUEL</h1>
+  <p class="sub">light cycles · wall your rival in</p>
+  <div class="scorebar"><span class="p1name">P1</span> <span id="p1score">0</span> <span class="dash">—</span> <span id="p2score">0</span> <span class="p2name">P2</span></div>
+
+  <div class="stage">
+    <canvas id="arena"></canvas>
+    <div class="overlay" id="overlay"></div>
+  </div>
+
+  <div class="hint" id="hint"><span class="c">P1: W A S D</span> &nbsp;·&nbsp; <span class="m">P2: &#9664; &#9650; &#9660; &#9654;</span> &nbsp;·&nbsp; first to 5</div>
+  <div class="controls">
+    <button id="newBtn">&#10227; New Game</button>
+    <button id="howBtn" class="ghost">? How to Play</button>
+  </div>
+
+  <div class="modal" id="howto">
+    <div class="modal-card">
+      <button class="x" id="howClose" aria-label="Close">&times;</button>
+      <h2>HOW TO PLAY</h2>
+      <p>Two light cycles race around the grid, each leaving a solid wall of light behind it. You can't stop and you can't reverse — only turn.</p>
+      <p><b>Crash into any wall</b> — the edge, your own trail, or your rival's — and you're out. Last cycle riding wins the round. <b>First to 5</b> takes the match.</p>
+      <p><span style="color:var(--p1)">Player 1</span> steers with <b>W A S D</b>. <span style="color:var(--p2)">Player 2</span> steers with the <b>arrow keys</b>. On a phone, <b>swipe</b> to steer in 1‑player mode.</p>
+      <p>Pick <b>1 Player</b> to duel the <b>AI</b>, or <b>2 Players</b> to grab a friend on the same keyboard. The cycles speed up the longer a round lasts — don't get boxed in.</p>
+      <p><b>Play Online</b> connects you to a faraway friend: pick a room code, share the link, and you both steer with <b>W A S D</b> on your own screens. (Online needs the hosted page — not a local file.)</p>
+      <p><b>Difficulty</b> sets the pace and how sharp the AI plays: <span style="color:var(--green)">Easy</span> is slow and forgiving; <span style="color:var(--amber)">Expert</span> is fast and hunts you down — it'll cut off your space, not just survive.</p>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  // ---------- arena ----------
+  const COLS = 60, ROWS = 45, WINS = 5;          // 4:3 grid
+  // difficulty sets both the SPEED (start/min ms-per-cell + ramp) and the AI (look-ahead depth, randomness, aggression)
+  const DIFF = {
+    easy:   { label:'Easy',   start:128, min:80, ramp:0.20, depth:32,  rand:12, aggro:0 },
+    medium: { label:'Medium', start:98,  min:60, ramp:0.40, depth:75,  rand:6,  aggro:0.2 },
+    hard:   { label:'Hard',   start:82,  min:48, ramp:0.52, depth:130, rand:3,  aggro:0.5 },
+    expert: { label:'Expert', start:66,  min:40, ramp:0.64, depth:230, rand:1,  aggro:0.9 },
+  };
+  const ORDER = ['easy','medium','hard','expert'];
+  let difficulty = 'medium';
+  const DIRS = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
+  function opposite(a,b){ return a && b && a.x===-b.x && a.y===-b.y; }
+
+  const canvas = document.getElementById('arena'), ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const p1scoreEl = document.getElementById('p1score'), p2scoreEl = document.getElementById('p2score');
+  let cell = 12; // css px per cell (set in resize)
+
+  // ---------- state ----------
+  let occ;                 // Int grid: 0 empty, 1 = p1, 2 = p2
+  let p1, p2, scores, mode='2p';
+  let role = null;         // online: 'host' | 'guest'
+  let state = 'menu';      // menu | count | play | round | match
+  let stateTimer = 0, tick = DIFF.medium.start, acc = 0, lastT = 0, lastCd = -1;
+
+  function newPlayer(id, x, y, dir){
+    return { id, color:'', dim:'', dir:DIRS[dir], pending:null, head:{x,y}, trail:[{x,y}], alive:true };
+  }
+  function idx(x,y){ return y*COLS + x; }
+  function inBounds(c){ return c.x>=0 && c.x<COLS && c.y>=0 && c.y<ROWS; }
+  function occupied(c){ return occ[idx(c.x,c.y)] !== 0; }
+  function add(c,d){ return { x:c.x+d.x, y:c.y+d.y }; }
+
+  function setupBoard(){     // identical starting state for host + guest
+    occ = new Int8Array(COLS*ROWS);
+    p1 = newPlayer(1, 9, (ROWS>>1), 'right');
+    p2 = newPlayer(2, COLS-10, (ROWS>>1), 'left');
+    p1.color = getCss('--p1'); p1.dim = getCss('--p1dim');
+    p2.color = getCss('--p2'); p2.dim = getCss('--p2dim');
+    occ[idx(p1.head.x,p1.head.y)] = 1;
+    occ[idx(p2.head.x,p2.head.y)] = 2;
+  }
+  function resetRound(){
+    setupBoard();
+    tick = DIFF[difficulty].start; acc = 0;
+    state = 'count'; stateTimer = 1900; lastCd = -1; // 3..2..1
+    sfxCount();
+    if (mode === 'online' && role === 'host') net.send({ t:'rs' });
+  }
+  function resetMatch(m){ mode = m; scores = { p1:0, p2:0 }; renderScore(); resetRound(); }
+
+  // ---------- AI: pick the turn that keeps the most open space (and, when aggressive, shrinks the rival's) ----------
+  function nonReverse(p){
+    const out = [];
+    for (const k in DIRS){ const d = DIRS[k]; if (!opposite(d, p.dir)) out.push(d); }
+    return out;
+  }
+  function openSpace(start, cap){
+    // bounded flood fill of empty cells reachable from `start`
+    const seen = new Set(); const q = [start]; let n = 0;
+    while (q.length && n < cap){
+      const c = q.pop(); const key = idx(c.x,c.y);
+      if (seen.has(key)) continue; seen.add(key);
+      if (!inBounds(c) || occ[key] !== 0) continue;
+      n++;
+      q.push({x:c.x+1,y:c.y},{x:c.x-1,y:c.y},{x:c.x,y:c.y+1},{x:c.x,y:c.y-1});
+    }
+    return n;
+  }
+  function freedom(pl, depth){                          // best open space the player can still reach
+    let m = 0;
+    for (const d of nonReverse(pl)){
+      const n = add(pl.head, d);
+      if (inBounds(n) && !occupied(n)){ const r = openSpace(n, depth); if (r > m) m = r; }
+    }
+    return m;
+  }
+  function aiChoose(p, opp){
+    const D = DIFF[difficulty];
+    let best = p.dir, bestScore = -1e9;
+    for (const d of nonReverse(p)){
+      const n = add(p.head, d);
+      if (!inBounds(n) || occupied(n)) continue;        // would die immediately
+      let score = openSpace(n, D.depth) + Math.random() * D.rand; // survival: keep room
+      if (D.aggro > 0 && opp && opp.alive){             // aggression: shrink the rival's room
+        occ[idx(n.x,n.y)] = p.id;
+        score -= D.aggro * freedom(opp, D.depth);
+        occ[idx(n.x,n.y)] = 0;
+      }
+      if (score > bestScore){ bestScore = score; best = d; }
+    }
+    return best;
+  }
+
+  // ---------- one simulation tick (inputs already buffered) ----------
+  function tickSim(){
+    if (mode === '1p' && p2.alive) p2.pending = aiChoose(p2, p1);
+    for (const p of [p1,p2]){
+      if (p.alive && p.pending && !opposite(p.pending, p.dir)) p.dir = p.pending;
+      if (p) p.pending = null;
+    }
+    const n1 = p1.alive ? add(p1.head, p1.dir) : null;
+    const n2 = p2.alive ? add(p2.head, p2.dir) : null;
+    let d1=false, d2=false;
+    if (p1.alive && (!inBounds(n1) || occupied(n1))) d1 = true;
+    if (p2.alive && (!inBounds(n2) || occupied(n2))) d2 = true;
+    if (p1.alive && p2.alive && n1.x===n2.x && n1.y===n2.y){ d1 = d2 = true; } // head-on
+    if (p1.alive && !d1){ occ[idx(n1.x,n1.y)] = 1; p1.head = n1; p1.trail.push(n1); }
+    if (p2.alive && !d2){ occ[idx(n2.x,n2.y)] = 2; p2.head = n2; p2.trail.push(n2); }
+    if (d1) p1.alive = false;
+    if (d2) p2.alive = false;
+    if (mode === 'online' && role === 'host')
+      net.send({ t:'tk', a:[p1.head.x,p1.head.y], b:[p2.head.x,p2.head.y], av:[p1.alive,p2.alive] });
+    const D = DIFF[difficulty];
+    tick = Math.max(D.min, tick - D.ramp);
+    if (d1 || d2) endRound(d1, d2);
+  }
+  function endRound(d1, d2){
+    sfxCrash();
+    let msg, cls;
+    if (d1 && d2){ msg = 'DRAW'; cls = 'draw'; }
+    else if (d1){ scores.p2++; msg = 'P2 SCORES'; cls = 'win2'; }
+    else { scores.p1++; msg = 'P1 SCORES'; cls = 'win1'; }
+    renderScore();
+    const matchOver = scores.p1 >= WINS || scores.p2 >= WINS;
+    if (mode === 'online' && role === 'host'){
+      if (matchOver) net.send({ t:'mo', w: scores.p1>=WINS?1:2, s:[scores.p1,scores.p2] });
+      else net.send({ t:'ro', m:msg, c:cls, s:[scores.p1,scores.p2] });
+    }
+    if (matchOver){ state = 'match'; stateTimer = 0; showMatch(); }
+    else { state = 'round'; stateTimer = 1300; showOverlay('<div class="head '+cls+'">'+msg+'</div>'); }
+  }
+
+  // ---------- loop ----------
+  function frame(t){
+    const dt = Math.min(60, t - lastT); lastT = t;
+    if (mode === 'online' && role === 'guest'){ draw(); requestAnimationFrame(frame); return; } // guest renders host's state
+    if (state === 'count'){
+      stateTimer -= dt;
+      if (stateTimer <= 0){ state = 'play'; acc = 0; clearOverlay(); sfxGo(); if (mode==='online'&&role==='host') net.send({t:'go'}); }
+      else { const n = Math.ceil(stateTimer/600); showOverlay('<div class="big">'+(n>0?n:'')+'</div>'); if (mode==='online'&&role==='host'&&n!==lastCd){ lastCd=n; net.send({t:'cd',n:n}); } }
+    } else if (state === 'play'){
+      acc += dt;
+      let safety = 0;
+      while (acc >= tick && state === 'play' && safety < 6){ acc -= tick; tickSim(); safety++; }
+    } else if (state === 'round'){
+      stateTimer -= dt;
+      if (stateTimer <= 0) resetRound();
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- render ----------
+  function draw(){
+    const w = COLS*cell, h = ROWS*cell;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = '#020a08'; ctx.fillRect(0,0,w,h);
+    // faint grid
+    ctx.strokeStyle = 'rgba(0,255,102,.06)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x=0;x<=COLS;x+=4){ ctx.moveTo(x*cell,0); ctx.lineTo(x*cell,h); }
+    for (let y=0;y<=ROWS;y+=4){ ctx.moveTo(0,y*cell); ctx.lineTo(w,y*cell); }
+    ctx.stroke();
+    if (p1) drawPlayer(p1);
+    if (p2) drawPlayer(p2);
+  }
+  function drawPlayer(p){
+    const s = cell + 0.7;
+    ctx.fillStyle = p.dim;
+    for (let i=0;i<p.trail.length-1;i++){ const c = p.trail[i]; ctx.fillRect(c.x*cell, c.y*cell, s, s); }
+    const hd = p.head;
+    ctx.save();
+    ctx.shadowColor = p.color; ctx.shadowBlur = p.alive ? 14 : 0;
+    ctx.fillStyle = p.alive ? p.color : p.dim;
+    ctx.fillRect(hd.x*cell, hd.y*cell, s, s);
+    ctx.restore();
+  }
+
+  // ---------- overlay ----------
+  function clearOverlay(){ overlay.classList.add('hide'); overlay.innerHTML=''; overlay.style.pointerEvents='none'; }
+  function showOverlay(html, clickable){
+    overlay.classList.remove('hide'); overlay.innerHTML = html;
+    overlay.style.pointerEvents = clickable ? 'auto' : 'none';
+  }
+  function showMenu(){
+    state = 'menu';
+    const chips = ORDER.map(k => '<button class="diffchip'+(k===difficulty?' active':'')+'" data-diff="'+k+'">'+DIFF[k].label+'</button>').join('');
+    showOverlay('<div class="head">SELECT DIFFICULTY</div>'+
+      '<div class="diffrow">'+chips+'</div>'+
+      '<div class="moderow">'+
+        '<button class="p1btn" id="mode1">1 Player &middot; vs AI</button>'+
+        '<button class="p2btn" id="mode2">2 Players</button>'+
+        '<button id="modeo">&#9737; Play Online</button>'+
+      '</div>', true);
+    overlay.querySelectorAll('.diffchip').forEach(c => c.onclick = () => {
+      difficulty = c.getAttribute('data-diff'); ensureAudio(); sfxCount();
+      overlay.querySelectorAll('.diffchip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+    document.getElementById('mode1').onclick = () => { ensureAudio(); resetMatch('1p'); };
+    document.getElementById('mode2').onclick = () => { ensureAudio(); resetMatch('2p'); };
+    document.getElementById('modeo').onclick = () => { ensureAudio(); showOnline(); };
+  }
+  function backToMenu(){ if (mode === 'online') net.close(); mode = '2p'; role = null; setHint(); showMenu(); }
+  function showMatch(){
+    const p1won = scores.p1 >= WINS;
+    showOverlay('<div class="head '+(p1won?'win1':'win2')+'">'+(p1won?'P1':'P2')+' WINS THE MATCH</div>'+
+      '<button id="again">&#10227; '+(mode==='online'?'Back to Menu':'Play Again')+'</button>', true);
+    document.getElementById('again').onclick = () => { ensureAudio(); if (mode==='online') backToMenu(); else showMenu(); };
+    sfxWin();
+  }
+
+  // ---------- online: host-authoritative over a PeerJS data channel (lazy-loaded, free public broker) ----------
+  let PeerLib = null;
+  async function ensurePeer(){ if (!PeerLib){ const m = await import('https://esm.sh/peerjs@1'); PeerLib = m.Peer || m.default; } return PeerLib; }
+  const net = {
+    peer:null, conn:null,
+    async connect(code, onStatus){
+      const Peer = await ensurePeer();
+      const hostId = 'fungames-gridduel-' + code;
+      role = 'host'; onStatus('hosting…');
+      this.peer = new Peer(hostId);
+      this.peer.on('open', () => onStatus('waiting for player…'));
+      this.peer.on('connection', c => { this.conn = c; this._wire(c); });
+      this.peer.on('error', e => {
+        if (e.type === 'unavailable-id'){                 // room already hosted → become the guest
+          try { this.peer.destroy(); } catch(x){}
+          role = 'guest'; onStatus('joining…');
+          this.peer = new Peer();
+          this.peer.on('open', () => { const c = this.peer.connect(hostId, { reliable:true }); this.conn = c; this._wire(c); });
+          this.peer.on('error', e2 => onStatus('error: ' + e2.type));
+        } else onStatus('error: ' + e.type);
+      });
+    },
+    _wire(c){ c.on('open', onConnected); c.on('data', onNetMsg); c.on('close', onDisconnected); },
+    send(o){ if (this.conn && this.conn.open){ try { this.conn.send(o); } catch(x){} } },
+    close(){ try { if (this.conn) this.conn.close(); } catch(x){} try { if (this.peer) this.peer.destroy(); } catch(x){} this.conn=null; this.peer=null; }
+  };
+
+  function onConnected(){
+    mode = 'online'; setHint();
+    if (role === 'host'){ scores = { p1:0, p2:0 }; renderScore(); resetRound(); }
+    else showOverlay('<div class="head win1">connected &#10003;</div><div class="sub2">waiting for host to start&hellip;</div>');
+  }
+  function onDisconnected(){
+    if (mode !== 'online') return;
+    state = 'menu';
+    showOverlay('<div class="head draw">OPPONENT LEFT</div><button id="back">&#9664; Back to Menu</button>', true);
+    const bk = document.getElementById('back'); if (bk) bk.onclick = () => { ensureAudio(); backToMenu(); };
+  }
+  function applyHead(p, hd, id){
+    if (hd[0] !== p.head.x || hd[1] !== p.head.y){ const c = {x:hd[0], y:hd[1]}; p.head = c; p.trail.push(c); occ[idx(c.x,c.y)] = id; }
+  }
+  function onNetMsg(d){
+    if (role === 'host'){                                 // host only listens for the guest's steering
+      if (d.t === 'in' && state === 'play' && p2.alive){ const dir = DIRS[d.dir]; if (dir && !opposite(dir, p2.dir)) p2.pending = dir; }
+      return;
+    }
+    switch (d.t){                                         // guest renders the host's authoritative state
+      case 'rs': setupBoard(); clearOverlay(); break;
+      case 'cd': showOverlay('<div class="big">'+(d.n>0?d.n:'')+'</div>'); break;
+      case 'go': clearOverlay(); sfxGo(); break;
+      case 'tk': applyHead(p1, d.a, 1); applyHead(p2, d.b, 2); p1.alive=d.av[0]; p2.alive=d.av[1]; break;
+      case 'ro': scores={p1:d.s[0],p2:d.s[1]}; renderScore(); sfxCrash(); showOverlay('<div class="head '+d.c+'">'+d.m+'</div>'); break;
+      case 'mo': scores={p1:d.s[0],p2:d.s[1]}; renderScore(); sfxWin();
+        showOverlay('<div class="head '+(d.w===1?'win1':'win2')+'">'+(d.w===1?'P1':'P2')+' WINS THE MATCH</div><button id="back">&#9664; Back to Menu</button>', true);
+        { const bk=document.getElementById('back'); if (bk) bk.onclick = () => { ensureAudio(); backToMenu(); }; } break;
+    }
+  }
+  function showOnline(){
+    state = 'menu'; mode = '2p'; role = null;
+    const code0 = (location.hash.slice(1) || Math.random().toString(36).slice(2,6)).toUpperCase();
+    showOverlay('<div class="head">PLAY ONLINE</div>'+
+      '<div class="sub2">same room code connects you two &middot; share the link</div>'+
+      '<div class="netrow"><input id="room" maxlength="8" value="'+code0+'"><button id="conn">Connect</button></div>'+
+      '<div class="netstatus" id="nstat">pick a code &amp; hit connect</div>'+
+      '<button class="ghost2" id="netback">&#9664; back</button>', true);
+    const stat = document.getElementById('nstat');
+    document.getElementById('conn').onclick = () => {
+      const code = (document.getElementById('room').value || '').trim().toUpperCase();
+      if (!code) return;
+      location.hash = code; ensureAudio();
+      document.getElementById('conn').disabled = true;
+      stat.textContent = 'connecting…';
+      net.connect(code, s => { stat.textContent = s; }).catch(e => { stat.textContent = 'error: ' + e.message; });
+    };
+    document.getElementById('netback').onclick = () => showMenu();
+  }
+  function setHint(){
+    const h = document.getElementById('hint');
+    if (mode === 'online'){
+      h.innerHTML = role === 'host'
+        ? 'You are <span class="c">P1 (cyan)</span> — steer with <span style="color:var(--green)">W A S D</span>'
+        : 'You are <span class="m">P2 (magenta)</span> — steer with <span style="color:var(--green)">W A S D</span>';
+    } else {
+      h.innerHTML = '<span class="c">P1: W A S D</span> &nbsp;·&nbsp; <span class="m">P2: &#9664; &#9650; &#9660; &#9654;</span> &nbsp;·&nbsp; first to 5';
+    }
+  }
+
+  // ---------- input ----------
+  const K1 = { KeyW:'up', KeyS:'down', KeyA:'left', KeyD:'right' };
+  const K2 = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right' };
+  document.addEventListener('keydown', (e) => {
+    if (e.code in K1 || e.code in K2 || e.code === 'Space') e.preventDefault();
+    if (state !== 'play') return;
+    if (mode === 'online'){                               // both players steer with WASD on their own screen
+      if (e.code in K1){
+        if (role === 'host'){ const d = DIRS[K1[e.code]]; if (p1.alive && !opposite(d, p1.dir)) p1.pending = d; }
+        else net.send({ t:'in', dir: K1[e.code] });       // guest sends its steering to the host
+      }
+      return;
+    }
+    if (e.code in K1 && p1.alive){ const d = DIRS[K1[e.code]]; if (!opposite(d, p1.dir)) p1.pending = d; }
+    if (mode === '2p' && e.code in K2 && p2.alive){ const d = DIRS[K2[e.code]]; if (!opposite(d, p2.dir)) p2.pending = d; }
+    if (mode === '1p' && e.code in K2 && p1.alive){ const d = DIRS[K2[e.code]]; if (!opposite(d, p1.dir)) p1.pending = d; } // arrows also drive P1 solo
+  });
+  // touch: swipe to steer (1-player / online on phones)
+  let tsx=0, tsy=0;
+  canvas.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; tsx=t.clientX; tsy=t.clientY; }, {passive:true});
+  canvas.addEventListener('touchend', (e)=>{
+    if (state !== 'play') return;
+    const t=e.changedTouches[0], dx=t.clientX-tsx, dy=t.clientY-tsy;
+    if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+    const name = Math.abs(dx) > Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+    const d = DIRS[name];
+    if (mode === 'online'){
+      if (role === 'host'){ if (p1.alive && !opposite(d, p1.dir)) p1.pending = d; }
+      else net.send({ t:'in', dir:name });
+      return;
+    }
+    if (p1.alive && !opposite(d, p1.dir)) p1.pending = d;
+  }, {passive:true});
+
+  document.getElementById('newBtn').addEventListener('click', () => { ensureAudio(); showMenu(); });
+  const howto = document.getElementById('howto');
+  document.getElementById('howBtn').addEventListener('click', () => howto.classList.add('show'));
+  document.getElementById('howClose').addEventListener('click', () => howto.classList.remove('show'));
+  howto.addEventListener('click', (e) => { if (e.target === howto) howto.classList.remove('show'); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') howto.classList.remove('show'); });
+
+  function renderScore(){ p1scoreEl.textContent = scores.p1; p2scoreEl.textContent = scores.p2; }
+  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  // ---------- sizing: fit the arena to the window, never scroll ----------
+  function reservedH(){
+    const sel = ['h1','.sub','.scorebar','.hint','.controls'];
+    let h = 0; for (const s of sel){ const e = document.querySelector(s); if (e) h += e.offsetHeight; }
+    return h + 9*5 + 24 + 14;
+  }
+  function resize(){
+    const dpr = window.devicePixelRatio || 1;
+    const availW = window.innerWidth * 0.96;
+    const availH = window.innerHeight - reservedH();
+    let w = Math.min(780, availW, availH * (COLS/ROWS));
+    w = Math.max(280, Math.floor(w));
+    cell = w / COLS;
+    const W = Math.round(cell*COLS), H = Math.round(cell*ROWS);
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    // shrink-to-fit guard so the page never scrolls vertically
+    let guard = 0;
+    while (document.documentElement.scrollHeight > window.innerHeight + 1 && w > 200 && guard < 12){
+      const over = document.documentElement.scrollHeight - window.innerHeight;
+      w = Math.max(200, w - Math.max(16, over * (COLS/ROWS)));
+      cell = w / COLS;
+      const W2 = Math.round(cell*COLS), H2 = Math.round(cell*ROWS);
+      canvas.style.width = W2+'px'; canvas.style.height = H2+'px';
+      canvas.width = Math.round(W2*dpr); canvas.height = Math.round(H2*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      guard++;
+    }
+    draw();
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------- audio (synth, no files) ----------
+  let actx = null;
+  function ensureAudio(){ try{ if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){} }
+  function tone(f,t,d,ty,vol){ try{ if(!actx)return; const o=actx.createOscillator(),g=actx.createGain(); o.type=ty||'square'; o.frequency.setValueAtTime(f,t); o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol||.18,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.start(t); o.stop(t+d+.03); }catch(e){} }
+  function sfxCount(){ if(!actx)return; const t=actx.currentTime; tone(440,t,.12,'square',.14); }
+  function sfxGo(){ if(!actx)return; const t=actx.currentTime; tone(880,t,.18,'square',.2); }
+  function sfxCrash(){ if(!actx)return; const t=actx.currentTime; tone(120,t,.22,'sawtooth',.26); tone(80,t+.04,.24,'sawtooth',.2); }
+  function sfxWin(){ if(!actx)return; const t=actx.currentTime, n=[523,659,784,1047]; for(let i=0;i<4;i++) tone(n[i],t+i*.1,.16,'square',.2); }
+
+  // ---------- boot ----------
+  resize(); showMenu(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

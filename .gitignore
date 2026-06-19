@@ -1,0 +1,9 @@
+# Claude Code local config (machine-specific)
+.claude/
+
+# macOS
+.DS_Store
+
+# editor cruft
+*.swp
+*~
