@@ -243,14 +243,14 @@
   // ---------- loop ----------
   function frame(t){
     const dt = Math.min(60, t - lastT); lastT = t;
-    if (mode === 'online' && role === 'guest'){ if (state === 'fly') stepArrow(dt); draw(); requestAnimationFrame(frame); return; }
+    if (mode === 'online' && role === 'guest'){ if (state === 'fly') stepArrow(dt); if (!document.hidden) draw(); return; }
     if (state === 'aim' && mode === '1p' && turn === 2){ /* shouldn't happen */ }
     if (state === 'watch' && mode === '1p' && turn === 2){    // AI thinking then fire
       aiTimer -= dt; if (aiTimer <= 0){ const a = aiAim(); resolveShot(2, a.angle, a.power); }
     } else if (state === 'fly'){ stepArrow(dt); }
     else if (state === 'result'){ stateTimer -= dt; if (stateTimer <= 0){ clearOverlay(); afterResult(); } }
     else if (state === 'match' && mode === 'online' && role === 'host'){ stateTimer -= dt; if (stateTimer <= 0) newMatch(); }
-    draw(); requestAnimationFrame(frame);
+    if (!document.hidden) draw();
   }
   function stepArrow(dt){
     if (!shot) return;
@@ -490,7 +490,13 @@
   howto.addEventListener('click', (e) => { if (e.target===howto) howto.classList.remove('show'); });
   document.addEventListener('keydown', (e) => { if (e.key==='Escape') howto.classList.remove('show'); });
 
-  resize(); showMenu(); requestAnimationFrame(frame);
+  resize(); showMenu();
+  // background-proof loop: a Web Worker timer keeps the game running even when the host's tab is hidden (rAF freezes when hidden)
+  (function(){
+    function pump(){ frame(performance.now ? performance.now() : Date.now()); }
+    try { var wk = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},16)'],{type:'application/javascript'}))); wk.onmessage = pump; }
+    catch(e){ setInterval(pump, 16); }
+  })();
 })();
 </script>
 </body>

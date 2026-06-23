@@ -257,7 +257,7 @@
   // ---------- loop ----------
   function frame(t){
     const dt = Math.min(60, t - lastT); lastT = t;
-    if (mode === 'online' && role === 'guest'){ draw(); requestAnimationFrame(frame); return; } // guest renders host's state
+    if (mode === 'online' && role === 'guest'){ if (!document.hidden) draw(); return; } // guest renders host's state
     if (state === 'count'){
       stateTimer -= dt;
       if (stateTimer <= 0){ state = 'play'; acc = 0; clearOverlay(); sfxGo(); if (mode==='online'&&role==='host') net.send({t:'go'}); }
@@ -273,8 +273,7 @@
       stateTimer -= dt;
       if (stateTimer <= 0){ scores = { p1:0, p2:0 }; renderScore(); resetRound(); } // frictionless auto-rematch
     }
-    draw();
-    requestAnimationFrame(frame);
+    if (!document.hidden) draw();
   }
 
   // ---------- render ----------
@@ -531,7 +530,13 @@
   function sfxWin(){ if(!actx)return; const t=actx.currentTime, n=[523,659,784,1047]; for(let i=0;i<4;i++) tone(n[i],t+i*.1,.16,'square',.2); }
 
   // ---------- boot ----------
-  resize(); showMenu(); requestAnimationFrame(frame);
+  resize(); showMenu();
+  // background-proof loop: a Web Worker timer keeps the game running even when the host's tab is hidden (rAF freezes when hidden)
+  (function(){
+    function pump(){ frame(performance.now ? performance.now() : Date.now()); }
+    try { var wk = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},16)'],{type:'application/javascript'}))); wk.onmessage = pump; }
+    catch(e){ setInterval(pump, 16); }
+  })();
 })();
 </script>
 </body>
